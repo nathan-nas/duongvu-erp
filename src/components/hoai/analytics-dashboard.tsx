@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -10,8 +11,10 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { sumBy, sumByMonth } from "@/lib/hoai/aggregations";
-import { formatVnd, formatViDate } from "@/lib/hoai/format";
-import { SpendBarChart } from "./spend-bar-chart";
+import { formatVnd } from "@/lib/hoai/format";
+import { SpendTreemap } from "./spend-treemap";
+import { SpendAreaChart } from "./spend-area-chart";
+import { DetailSheet } from "./detail-sheet";
 
 export type AnalyticsBatch = {
   id: string;
@@ -51,9 +54,10 @@ const batchKindLabel = {
   unknown: "Không xác định",
 };
 
-function DetailCell({ children }: { children: React.ReactNode }) {
-  return <td className="whitespace-nowrap px-3 py-2">{children ?? "—"}</td>;
-}
+type DrillState = {
+  field: "plant_name" | "expense_code" | "month";
+  value: string;
+} | null;
 
 export function AnalyticsDashboard({
   batches,
@@ -61,6 +65,41 @@ export function AnalyticsDashboard({
   lines,
 }: AnalyticsDashboardProps) {
   const router = useRouter();
+  const [drill, setDrill] = useState<DrillState>(null);
+
+  const plantData = useMemo(() => sumBy(lines, "plant_name", 15), [lines]);
+  const expenseData = useMemo(() => sumBy(lines, "expense_code", 15), [lines]);
+  const monthData = useMemo(() => sumByMonth(lines), [lines]);
+
+  const filteredLines = useMemo(() => {
+    if (!drill) return [];
+    if (drill.field === "month") {
+      return lines.filter((l) => l.payment_date?.startsWith(drill.value));
+    }
+    if (drill.field === "plant_name") {
+      return lines.filter((l) => l.plant_name === drill.value);
+    }
+    return lines.filter((l) => l.expense_code === drill.value);
+  }, [lines, drill]);
+
+  const filteredTotal = useMemo(
+    () => filteredLines.reduce((s, l) => s + (l.amount ?? 0), 0),
+    [filteredLines],
+  );
+
+  const handlePlantClick = useCallback((label: string) => {
+    setDrill({ field: "plant_name", value: label });
+  }, []);
+
+  const handleExpenseClick = useCallback((label: string) => {
+    setDrill({ field: "expense_code", value: label });
+  }, []);
+
+  const handleMonthClick = useCallback((label: string) => {
+    setDrill({ field: "month", value: label });
+  }, []);
+
+  const handleClose = useCallback(() => setDrill(null), []);
 
   if (batches.length === 0 || !selectedBatchId) {
     return (
@@ -76,19 +115,24 @@ export function AnalyticsDashboard({
     );
   }
 
-  const totalAmount = lines.reduce((total, line) => total + (line.amount ?? 0), 0);
-  const plantCount = new Set(
-    lines.map((line) => line.plant_name?.trim()).filter(Boolean),
-  ).size;
-  const expenseCodeCount = new Set(
-    lines.map((line) => line.expense_code?.trim()).filter(Boolean),
-  ).size;
+  const totalAmount = lines.reduce((t, l) => t + (l.amount ?? 0), 0);
+  const plantCount = new Set(lines.map((l) => l.plant_name?.trim()).filter(Boolean)).size;
+  const expenseCodeCount = new Set(lines.map((l) => l.expense_code?.trim()).filter(Boolean)).size;
+
   const cards = [
     { label: "Tổng chi", value: formatVnd(totalAmount) },
     { label: "Số dòng", value: new Intl.NumberFormat("vi-VN").format(lines.length) },
-    { label: "Số nhà máy", value: new Intl.NumberFormat("vi-VN").format(plantCount) },
-    { label: "Số mã chi", value: new Intl.NumberFormat("vi-VN").format(expenseCodeCount) },
+    { label: "Số nhà máy", value: String(plantCount) },
+    { label: "Số mã chi", value: String(expenseCodeCount) },
   ];
+
+  const drillTitle = drill
+    ? drill.field === "plant_name"
+      ? `NM: ${drill.value}`
+      : drill.field === "expense_code"
+        ? `Mã: ${drill.value}`
+        : `Tháng: ${drill.value}`
+    : "";
 
   return (
     <div className="flex flex-col gap-6">
@@ -99,14 +143,11 @@ export function AnalyticsDashboard({
             <select
               className="h-9 rounded-md border border-input bg-background px-3 text-sm"
               value={selectedBatchId}
-              onChange={(event) =>
-                router.push(`/app/analytics?batch=${event.target.value}`)
-              }
+              onChange={(e) => router.push(`/app/analytics?batch=${e.target.value}`)}
             >
               {batches.map((batch) => (
                 <option key={batch.id} value={batch.id}>
-                  {batch.source_filename} — {batch.period_year} (
-                  {batchKindLabel[batch.batch_kind]})
+                  {batch.source_filename} — {batch.period_year} ({batchKindLabel[batch.batch_kind]})
                 </option>
               ))}
             </select>
@@ -118,9 +159,7 @@ export function AnalyticsDashboard({
         {cards.map((card) => (
           <Card key={card.label}>
             <CardHeader>
-              <CardTitle className="text-sm text-muted-foreground">
-                {card.label}
-              </CardTitle>
+              <CardTitle className="text-sm text-muted-foreground">{card.label}</CardTitle>
             </CardHeader>
             <CardContent className="text-xl font-semibold">{card.value}</CardContent>
           </Card>
@@ -131,101 +170,40 @@ export function AnalyticsDashboard({
         <Card>
           <CardHeader>
             <CardTitle>Chi theo nhà máy (NM)</CardTitle>
+            <p className="text-xs text-muted-foreground">Nhấn vào ô để xem chi tiết</p>
           </CardHeader>
           <CardContent>
-            <SpendBarChart data={sumBy(lines, "plant_name", 10)} />
+            <SpendTreemap data={plantData} onClickBlock={handlePlantClick} />
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Chi theo mã (MÃ)</CardTitle>
+            <CardTitle>Chi theo mã chi phí (MÃ)</CardTitle>
+            <p className="text-xs text-muted-foreground">Nhấn vào ô để xem chi tiết</p>
           </CardHeader>
           <CardContent>
-            <SpendBarChart data={sumBy(lines, "expense_code", 10)} />
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Chi theo tháng</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <SpendBarChart data={sumByMonth(lines)} />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Chi theo hình thức thanh toán</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <SpendBarChart data={sumBy(lines, "payment_method", 10)} />
+            <SpendTreemap data={expenseData} onClickBlock={handleExpenseClick} />
           </CardContent>
         </Card>
       </section>
 
       <Card>
         <CardHeader>
-          <CardTitle>Chi tiết</CardTitle>
+          <CardTitle>Xu hướng chi theo tháng</CardTitle>
+          <p className="text-xs text-muted-foreground">Nhấn vào điểm để xem chi tiết tháng</p>
         </CardHeader>
-        <CardContent className="overflow-x-auto p-0">
-          <table className="w-full text-left text-sm">
-            <thead className="border-y bg-muted/50">
-              <tr>
-                {[
-                  "Ngày chi tiền",
-                  "MÃ KH",
-                  "TÊN CỬA HÀNG",
-                  "Mã hàng",
-                  "TÊN HÀNG",
-                  "ĐVT",
-                  "S. LƯỢNG",
-                  "ĐƠN GIÁ",
-                  "THÀNH TIỀN",
-                  "NM",
-                  "MÃ",
-                  "THANH TOÁN",
-                  "DIỄN GIẢI",
-                  "HÓA ĐƠN",
-                  "GHI CHÚ",
-                ].map((header) => (
-                  <th key={header} className="whitespace-nowrap px-3 py-2 font-medium">
-                    {header}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {lines.map((line) => (
-                <tr key={line.id} className="border-b last:border-0">
-                  <DetailCell>{formatViDate(line.payment_date)}</DetailCell>
-                  <DetailCell>{line.party_code}</DetailCell>
-                  <DetailCell>{line.party_name}</DetailCell>
-                  <DetailCell>{line.item_code}</DetailCell>
-                  <DetailCell>{line.item_name}</DetailCell>
-                  <DetailCell>{line.uom}</DetailCell>
-                  <DetailCell>
-                    {line.qty != null ? line.qty.toLocaleString("vi-VN") : null}
-                  </DetailCell>
-                  <DetailCell>
-                    {line.unit_price != null ? formatVnd(line.unit_price) : null}
-                  </DetailCell>
-                  <DetailCell>
-                    {line.amount != null ? formatVnd(line.amount) : null}
-                  </DetailCell>
-                  <DetailCell>{line.plant_name}</DetailCell>
-                  <DetailCell>{line.expense_code}</DetailCell>
-                  <DetailCell>{line.payment_method}</DetailCell>
-                  <DetailCell>{line.description}</DetailCell>
-                  <DetailCell>{line.invoice}</DetailCell>
-                  <DetailCell>{line.note}</DetailCell>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <CardContent>
+          <SpendAreaChart data={monthData} onClickPoint={handleMonthClick} />
         </CardContent>
       </Card>
+
+      <DetailSheet
+        open={drill !== null}
+        title={drillTitle}
+        totalAmount={filteredTotal}
+        lines={filteredLines}
+        onClose={handleClose}
+      />
     </div>
   );
 }
