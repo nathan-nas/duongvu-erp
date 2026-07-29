@@ -42,15 +42,26 @@ export default async function AnalyticsPage({
   const selectedBatchId = batches.some((batch) => batch.id === requestedBatchId)
     ? requestedBatchId!
     : (batches[0]?.id ?? null);
-  const { data: lineRows } = selectedBatchId
-    ? await supabase
+  const lineRows: typeof lines = [];
+  if (selectedBatchId) {
+    const PAGE = 1000;
+    let from = 0;
+    let done = false;
+    while (!done) {
+      const { data } = await supabase
         .from("spend_line")
         .select(
           "id, payment_date, party_code, party_name, item_code, item_name, uom, qty, unit_price, amount, plant_name, expense_code, payment_method, description, invoice, note",
         )
         .eq("batch_id", selectedBatchId)
         .order("payment_date", { ascending: true })
-    : { data: [] };
+        .range(from, from + PAGE - 1);
+      const rows = data ?? [];
+      lineRows.push(...(rows as typeof lineRows));
+      if (rows.length < PAGE) done = true;
+      else from += PAGE;
+    }
+  }
   const lines: AnalyticsLine[] = (lineRows ?? []).map((line) => ({
     id: String(line.id),
     payment_date: stringOrNull(line.payment_date),

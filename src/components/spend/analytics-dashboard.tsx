@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Maximize2, Minimize2 } from "lucide-react";
@@ -63,9 +63,12 @@ const batchKindLabel = {
   unknown: "Không xác định",
 };
 
+type DrillField = "plant_name" | "expense_code" | "month" | "all";
+
 type DrillState = {
-  field: "plant_name" | "expense_code" | "month";
+  field: DrillField;
   value: string;
+  source: ExpandedCard | "kpi";
 } | null;
 
 type ExpandedCard = "plant" | "expense" | "month" | null;
@@ -78,6 +81,15 @@ export function AnalyticsDashboard({
   const router = useRouter();
   const [drill, setDrill] = useState<DrillState>(null);
   const [expanded, setExpanded] = useState<ExpandedCard>(null);
+  const detailRef = useRef<HTMLDivElement>(null);
+
+  const batchLabelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const b of batches) {
+      map.set(b.id, `${b.source_filename} — ${b.period_year} (${batchKindLabel[b.batch_kind]})`);
+    }
+    return map;
+  }, [batches]);
 
   const plantData = useMemo(() => sumBy(lines, "plant_name", 15), [lines]);
   const expenseData = useMemo(() => sumBy(lines, "expense_code", 15), [lines]);
@@ -85,6 +97,7 @@ export function AnalyticsDashboard({
 
   const filteredLines = useMemo(() => {
     if (!drill) return [];
+    if (drill.field === "all") return lines;
     if (drill.field === "month") {
       return lines.filter((l) => l.payment_date?.startsWith(drill.value));
     }
@@ -99,17 +112,24 @@ export function AnalyticsDashboard({
     [filteredLines],
   );
 
-  const handlePlantClick = useCallback((label: string) => {
-    setDrill({ field: "plant_name", value: label });
+  const scrollToDetail = useCallback(() => {
+    setTimeout(() => detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   }, []);
+
+  const handlePlantClick = useCallback((label: string) => {
+    setDrill({ field: "plant_name", value: label, source: "plant" });
+    scrollToDetail();
+  }, [scrollToDetail]);
 
   const handleExpenseClick = useCallback((label: string) => {
-    setDrill({ field: "expense_code", value: label });
-  }, []);
+    setDrill({ field: "expense_code", value: label, source: "expense" });
+    scrollToDetail();
+  }, [scrollToDetail]);
 
   const handleMonthClick = useCallback((label: string) => {
-    setDrill({ field: "month", value: label });
-  }, []);
+    setDrill({ field: "month", value: label, source: "month" });
+    scrollToDetail();
+  }, [scrollToDetail]);
 
   const handleClose = useCallback(() => setDrill(null), []);
 
@@ -135,19 +155,22 @@ export function AnalyticsDashboard({
   const plantCount = new Set(lines.map((l) => l.plant_name?.trim()).filter(Boolean)).size;
   const expenseCodeCount = new Set(lines.map((l) => l.expense_code?.trim()).filter(Boolean)).size;
 
-  const kpis = [
-    { label: "Tổng chi", value: formatVnd(totalAmount) },
-    { label: "Số dòng", value: new Intl.NumberFormat("vi-VN").format(lines.length) },
-    { label: "Số nhà máy", value: String(plantCount) },
-    { label: "Số mã chi", value: String(expenseCodeCount) },
+  type KpiDef = { label: string; value: string; drillField: DrillField; drillValue: string; drillLabel: string };
+  const kpis: KpiDef[] = [
+    { label: "Tổng chi", value: formatVnd(totalAmount), drillField: "all", drillValue: "", drillLabel: "Tất cả dòng chi" },
+    { label: "Số dòng", value: new Intl.NumberFormat("vi-VN").format(lines.length), drillField: "all", drillValue: "", drillLabel: "Tất cả dòng chi" },
+    { label: "Số nhà máy", value: String(plantCount), drillField: "all", drillValue: "", drillLabel: "Tất cả nhà máy" },
+    { label: "Số mã chi", value: String(expenseCodeCount), drillField: "all", drillValue: "", drillLabel: "Tất cả mã chi" },
   ];
 
   const drillTitle = drill
-    ? drill.field === "plant_name"
-      ? `NM: ${drill.value}`
-      : drill.field === "expense_code"
-        ? `Mã: ${drill.value}`
-        : `Tháng: ${drill.value}`
+    ? drill.field === "all"
+      ? drill.value || "Tất cả dòng chi"
+      : drill.field === "plant_name"
+        ? `NM: ${drill.value}`
+        : drill.field === "expense_code"
+          ? `Mã: ${drill.value}`
+          : `Tháng: ${drill.value}`
     : "";
 
   const showPlant = expanded === null || expanded === "plant";
@@ -165,7 +188,9 @@ export function AnalyticsDashboard({
               onValueChange={(val) => router.push(`/app/analytics?batch=${val}`)}
             >
               <SelectTrigger className="w-full">
-                <SelectValue />
+                <SelectValue placeholder="Chọn lô dữ liệu">
+                  {selectedBatchId ? batchLabelMap.get(selectedBatchId) : null}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {batches.map((batch) => (
@@ -181,7 +206,14 @@ export function AnalyticsDashboard({
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Chỉ số tổng quan">
         {kpis.map((kpi) => (
-          <Card key={kpi.label} className="shadow-sm">
+          <Card
+            key={kpi.label}
+            className="cursor-pointer shadow-sm hover:ring-2 hover:ring-primary/30"
+            onClick={() => {
+              setDrill({ field: kpi.drillField, value: kpi.drillLabel, source: "kpi" });
+              scrollToDetail();
+            }}
+          >
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium text-muted-foreground">{kpi.label}</CardTitle>
             </CardHeader>
@@ -191,6 +223,17 @@ export function AnalyticsDashboard({
           </Card>
         ))}
       </section>
+
+      {drill && drill.source === "kpi" && (
+        <div ref={detailRef}>
+          <DetailSheet
+            title={drillTitle}
+            totalAmount={filteredTotal}
+            lines={filteredLines}
+            onClose={handleClose}
+          />
+        </div>
+      )}
 
       <section className={cn("grid gap-6", expanded === null && "lg:grid-cols-2")}>
         {showPlant && (
@@ -237,6 +280,17 @@ export function AnalyticsDashboard({
         )}
       </section>
 
+      {drill && (drill.source === "plant" || drill.source === "expense") && (
+        <div ref={detailRef}>
+          <DetailSheet
+            title={drillTitle}
+            totalAmount={filteredTotal}
+            lines={filteredLines}
+            onClose={handleClose}
+          />
+        </div>
+      )}
+
       {showMonth && (
         <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-start justify-between">
@@ -259,13 +313,16 @@ export function AnalyticsDashboard({
         </Card>
       )}
 
-      <DetailSheet
-        open={drill !== null}
-        title={drillTitle}
-        totalAmount={filteredTotal}
-        lines={filteredLines}
-        onClose={handleClose}
-      />
+      {drill && drill.source === "month" && (
+        <div ref={detailRef}>
+          <DetailSheet
+            title={drillTitle}
+            totalAmount={filteredTotal}
+            lines={filteredLines}
+            onClose={handleClose}
+          />
+        </div>
+      )}
     </div>
   );
 }
