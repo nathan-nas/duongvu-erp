@@ -9,21 +9,21 @@ export default function HomePage() {
       <div className="flex flex-col gap-2">
         <p className="text-sm font-medium text-muted-foreground">duongvu-erp</p>
         <h1 className="text-3xl font-semibold tracking-tight">
-          Agent-ready shell
+          Quản lý chi phí HOAI
         </h1>
         <p className="max-w-xl text-muted-foreground">
-          Product features come later. Sign in to reach the protected app area.
+          Tải lên file Excel, phân tích chi phí theo nhà máy và mã chi. Đăng nhập để bắt đầu.
         </p>
       </div>
       <div className="flex gap-3">
         <Link href="/login" className={cn(buttonVariants())}>
-          Sign in
+          Đăng nhập
         </Link>
         <Link
           href="/signup"
           className={cn(buttonVariants({ variant: "outline" }))}
         >
-          Sign up
+          Đăng ký
         </Link>
       </div>
     </main>

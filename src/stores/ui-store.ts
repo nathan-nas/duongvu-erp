@@ -1,14 +1,6 @@
 import { create } from "zustand";
 
-type UiState = {
-  sidebarOpen: boolean;
-  setSidebarOpen: (open: boolean) => void;
-  toggleSidebar: () => void;
-};
+type UiState = Record<string, never>;
 
 /** Client UI state only — auth comes from Supabase, not Zustand. */
-export const useUiStore = create<UiState>((set) => ({
-  sidebarOpen: false,
-  setSidebarOpen: (open) => set({ sidebarOpen: open }),
-  toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
-}));
+export const useUiStore = create<UiState>(() => ({}) as UiState);

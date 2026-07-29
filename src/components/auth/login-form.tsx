@@ -24,8 +24,8 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
-        <CardTitle>Sign in</CardTitle>
-        <CardDescription>Use your email and password.</CardDescription>
+        <CardTitle>Đăng nhập</CardTitle>
+        <CardDescription>Sử dụng email và mật khẩu của bạn.</CardDescription>
       </CardHeader>
       <form action={formAction}>
         <CardContent className="flex flex-col gap-4">
@@ -40,7 +40,7 @@ export function LoginForm() {
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">Mật khẩu</Label>
             <Input
               id="password"
               name="password"
@@ -58,12 +58,12 @@ export function LoginForm() {
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
           <Button type="submit" className="w-full" disabled={pending}>
-            {pending ? "Signing in…" : "Sign in"}
+            {pending ? "Đang đăng nhập…" : "Đăng nhập"}
           </Button>
           <p className="text-sm text-muted-foreground">
-            No account?{" "}
+            Chưa có tài khoản?{" "}
             <Link href="/signup" className="text-foreground underline">
-              Sign up
+              Đăng ký
             </Link>
           </p>
         </CardFooter>
