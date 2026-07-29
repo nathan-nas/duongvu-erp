@@ -5,9 +5,12 @@ alwaysApply: true
 
 # Project rules
 
-- Stack: Next.js App Router, TypeScript, Tailwind, shadcn/ui, Zustand (UI only), Supabase, Vercel-only deploy.
+- Stack: Next.js App Router, TypeScript, Tailwind, shadcn/ui, Zustand (UI only), Supabase, Recharts, Vercel-only deploy.
+- Brand: "Dương Vũ". All UI text in Vietnamese. Dark mode supported.
 - Agents follow AGENTS.md: design → plan → implement → `pnpm lint && pnpm typecheck && pnpm test`.
-- No org/business schema until product is defined. Auth user only.
+- No org/business schema until product is defined. Tables: `auth.users`, `spend_batch`, `spend_line`.
 - No service-role keys in client or `NEXT_PUBLIC_*` env vars.
 - Prefer surgical diffs; no speculative abstractions or extra features.
+- "HOAI" is an employee name — never use as brand/feature label.
+- Spend feature: components in `src/components/spend/`, logic in `src/lib/spend/`.
 - Specs live in `docs/superpowers/specs/`; plans in `docs/superpowers/plans/`.
