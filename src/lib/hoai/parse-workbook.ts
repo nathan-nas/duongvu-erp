@@ -33,6 +33,7 @@ function dateCellValue(cell: XLSX.CellObject | undefined, date1904: boolean) {
 export function parseHoaiWorkbook(
   file: ArrayBuffer,
   filename: string,
+  periodYearOverride?: number,
 ): ParsedWorkbookPreview {
   const workbook = XLSX.read(file, { type: "array", cellNF: true });
   const sheetNames = workbook.SheetNames;
@@ -57,7 +58,8 @@ export function parseHoaiWorkbook(
   const sheet = workbook.Sheets[factSheetName];
   const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, raw: true });
   const headerRowIndex = rows.slice(0, 10).findIndex(hasExpectedHeaders);
-  const periodYear = suggestedPeriodYear ?? new Date().getFullYear();
+  const periodYear =
+    periodYearOverride ?? suggestedPeriodYear ?? new Date().getFullYear();
   const date1904 = workbook.Workbook?.WBProps?.date1904 === true;
   const range = XLSX.utils.decode_range(sheet["!ref"] ?? "A1");
   const dataRows = headerRowIndex < 0

@@ -64,4 +64,20 @@ describe("parseHoaiWorkbook", () => {
       }),
     ]);
   });
+
+  it("uses an overridden period year when mapping rows", () => {
+    const sheet = XLSX.utils.aoa_to_sheet([
+      ["Ngày", "", "", "", "", "", "", "", "THÀNH TIỀN"],
+      [412, "", "", "", "", "", "", "", 100],
+    ]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, sheet, "BANG CHI TIET");
+    const preview = parseHoaiWorkbook(
+      XLSX.write(workbook, { type: "array", bookType: "xlsx" }),
+      "vật tư T5-2025.xlsx",
+      2026,
+    );
+
+    expect(preview.lines[0]?.payment_date).toBe("2026-12-04");
+  });
 });
