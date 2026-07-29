@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { sumBy, sumByMonth } from "@/lib/spend/aggregations";
+import { sumBy, sumByMonth, type SpendAggregate } from "@/lib/spend/aggregations";
 import { formatVnd } from "@/lib/spend/format";
 import { SpendTreemap } from "./spend-treemap";
 import { SpendAreaChart } from "./spend-area-chart";
@@ -65,15 +65,23 @@ const batchKindLabel = {
   unknown: "Không xác định",
 };
 
-type DrillField = "plant_name" | "expense_code" | "month" | "all";
-
-type DrillState = {
-  field: DrillField;
-  value: string;
-  source: ExpandedCard | "kpi";
-} | null;
-
 type ExpandedCard = "plant" | "expense" | "month" | null;
+
+type DrillState =
+  | {
+      kind: "lines";
+      title: string;
+      field: "all" | "plant_name" | "expense_code" | "month";
+      value: string;
+      source: ExpandedCard | "kpi";
+    }
+  | {
+      kind: "groups";
+      title: string;
+      groupLabel: string;
+      groups: SpendAggregate[];
+      source: "kpi";
+    };
 
 export function AnalyticsDashboard({
   batches,
@@ -81,7 +89,7 @@ export function AnalyticsDashboard({
   lines,
 }: AnalyticsDashboardProps) {
   const router = useRouter();
-  const [drill, setDrill] = useState<DrillState>(null);
+  const [drill, setDrill] = useState<DrillState | null>(null);
   const [expanded, setExpanded] = useState<ExpandedCard>(null);
   const detailRef = useRef<HTMLDivElement>(null);
 
@@ -96,9 +104,11 @@ export function AnalyticsDashboard({
   const plantData = useMemo(() => sumBy(lines, "plant_name", 15), [lines]);
   const expenseData = useMemo(() => sumBy(lines, "expense_code", 15), [lines]);
   const monthData = useMemo(() => sumByMonth(lines), [lines]);
+  const allPlantGroups = useMemo(() => sumBy(lines, "plant_name"), [lines]);
+  const allExpenseGroups = useMemo(() => sumBy(lines, "expense_code"), [lines]);
 
   const filteredLines = useMemo(() => {
-    if (!drill) return [];
+    if (!drill || drill.kind !== "lines") return [];
     if (drill.field === "all") return lines;
     if (drill.field === "month") {
       return lines.filter((l) => l.payment_date?.startsWith(drill.value));
@@ -118,25 +128,67 @@ export function AnalyticsDashboard({
     setTimeout(() => detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   }, []);
 
-  const handlePlantClick = useCallback((label: string) => {
-    setDrill({ field: "plant_name", value: label, source: "plant" });
-    scrollToDetail();
-  }, [scrollToDetail]);
+  const openAllLines = useCallback(
+    (source: ExpandedCard, title: string) => {
+      if (!source) return;
+      setDrill({ kind: "lines", title, field: "all", value: "", source });
+      scrollToDetail();
+    },
+    [scrollToDetail],
+  );
 
-  const handleExpenseClick = useCallback((label: string) => {
-    setDrill({ field: "expense_code", value: label, source: "expense" });
-    scrollToDetail();
-  }, [scrollToDetail]);
+  const handlePlantClick = useCallback(
+    (label: string) => {
+      setDrill({
+        kind: "lines",
+        title: `NM: ${label}`,
+        field: "plant_name",
+        value: label,
+        source: "plant",
+      });
+      scrollToDetail();
+    },
+    [scrollToDetail],
+  );
 
-  const handleMonthClick = useCallback((label: string) => {
-    setDrill({ field: "month", value: label, source: "month" });
-    scrollToDetail();
-  }, [scrollToDetail]);
+  const handleExpenseClick = useCallback(
+    (label: string) => {
+      setDrill({
+        kind: "lines",
+        title: `Mã: ${label}`,
+        field: "expense_code",
+        value: label,
+        source: "expense",
+      });
+      scrollToDetail();
+    },
+    [scrollToDetail],
+  );
+
+  const handleMonthClick = useCallback(
+    (label: string) => {
+      setDrill({
+        kind: "lines",
+        title: `Tháng: ${label}`,
+        field: "month",
+        value: label,
+        source: "month",
+      });
+      scrollToDetail();
+    },
+    [scrollToDetail],
+  );
 
   const handleClose = useCallback(() => setDrill(null), []);
 
-  function toggleExpand(card: ExpandedCard) {
-    setExpanded((prev) => (prev === card ? null : card));
+  function toggleExpand(card: NonNullable<ExpandedCard>, title: string) {
+    if (expanded === card) {
+      setExpanded(null);
+      setDrill((d) => (d && d.source === card ? null : d));
+      return;
+    }
+    setExpanded(card);
+    openAllLines(card, title);
   }
 
   if (batches.length === 0 || !selectedBatchId) {
@@ -155,31 +207,81 @@ export function AnalyticsDashboard({
 
   const selectedBatch = batches.find((b) => b.id === selectedBatchId)!;
   const totalAmount = selectedBatch.amount_sum;
-  const factRows = selectedBatch.fact_rows;
-  const plantCount = new Set(lines.map((l) => l.plant_name?.trim()).filter(Boolean)).size;
-  const expenseCodeCount = new Set(lines.map((l) => l.expense_code?.trim()).filter(Boolean)).size;
+  const plantCount = allPlantGroups.length;
+  const expenseCodeCount = allExpenseGroups.length;
 
-  type KpiDef = { label: string; value: string; drillField: DrillField; drillValue: string; drillLabel: string };
-  const kpis: KpiDef[] = [
-    { label: "Tổng chi", value: formatVnd(totalAmount), drillField: "all", drillValue: "", drillLabel: "Tất cả dòng chi" },
-    { label: "Số dòng", value: new Intl.NumberFormat("vi-VN").format(factRows), drillField: "all", drillValue: "", drillLabel: "Tất cả dòng chi" },
-    { label: "Số nhà máy", value: String(plantCount), drillField: "all", drillValue: "", drillLabel: "Tất cả nhà máy" },
-    { label: "Số mã chi", value: String(expenseCodeCount), drillField: "all", drillValue: "", drillLabel: "Tất cả mã chi" },
+  const kpis = [
+    {
+      label: "Tổng chi",
+      value: formatVnd(totalAmount),
+      onClick: () => {
+        setDrill({
+          kind: "lines",
+          title: "Tất cả dòng chi",
+          field: "all",
+          value: "",
+          source: "kpi",
+        });
+        scrollToDetail();
+      },
+    },
+    {
+      label: "Số nhà máy",
+      value: String(plantCount),
+      onClick: () => {
+        setDrill({
+          kind: "groups",
+          title: "Tổng hợp theo nhà máy",
+          groupLabel: "Nhà máy",
+          groups: allPlantGroups,
+          source: "kpi",
+        });
+        scrollToDetail();
+      },
+    },
+    {
+      label: "Số mã chi",
+      value: String(expenseCodeCount),
+      onClick: () => {
+        setDrill({
+          kind: "groups",
+          title: "Tổng hợp theo mã chi",
+          groupLabel: "Mã chi",
+          groups: allExpenseGroups,
+          source: "kpi",
+        });
+        scrollToDetail();
+      },
+    },
   ];
-
-  const drillTitle = drill
-    ? drill.field === "all"
-      ? drill.value || "Tất cả dòng chi"
-      : drill.field === "plant_name"
-        ? `NM: ${drill.value}`
-        : drill.field === "expense_code"
-          ? `Mã: ${drill.value}`
-          : `Tháng: ${drill.value}`
-    : "";
 
   const showPlant = expanded === null || expanded === "plant";
   const showExpense = expanded === null || expanded === "expense";
   const showMonth = expanded === null || expanded === "month";
+
+  function renderDetail(source: DrillState["source"]) {
+    if (!drill || drill.source !== source) return null;
+    return (
+      <div ref={detailRef}>
+        {drill.kind === "groups" ? (
+          <DetailSheet
+            title={drill.title}
+            totalAmount={drill.groups.reduce((s, g) => s + g.amount, 0)}
+            groups={drill.groups}
+            groupLabel={drill.groupLabel}
+            onClose={handleClose}
+          />
+        ) : (
+          <DetailSheet
+            title={drill.title}
+            totalAmount={filteredTotal}
+            lines={filteredLines}
+            onClose={handleClose}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -208,15 +310,12 @@ export function AnalyticsDashboard({
         </CardContent>
       </Card>
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Chỉ số tổng quan">
+      <section className="grid gap-4 sm:grid-cols-3" aria-label="Chỉ số tổng quan">
         {kpis.map((kpi) => (
           <Card
             key={kpi.label}
             className="cursor-pointer shadow-sm hover:ring-2 hover:ring-primary/30"
-            onClick={() => {
-              setDrill({ field: kpi.drillField, value: kpi.drillLabel, source: "kpi" });
-              scrollToDetail();
-            }}
+            onClick={kpi.onClick}
           >
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium text-muted-foreground">{kpi.label}</CardTitle>
@@ -228,105 +327,99 @@ export function AnalyticsDashboard({
         ))}
       </section>
 
-      {drill && drill.source === "kpi" && (
-        <div ref={detailRef}>
-          <DetailSheet
-            title={drillTitle}
-            totalAmount={filteredTotal}
-            lines={filteredLines}
-            onClose={handleClose}
-          />
-        </div>
-      )}
+      {renderDetail("kpi")}
 
       <section className={cn("grid gap-6", expanded === null && "lg:grid-cols-2")}>
         {showPlant && (
-          <Card className="shadow-sm">
+          <Card
+            className="cursor-pointer shadow-sm hover:ring-2 hover:ring-primary/30"
+            onClick={() => openAllLines("plant", "Chi theo nhà máy")}
+          >
             <CardHeader className="flex flex-row items-start justify-between">
               <div>
                 <CardTitle className="text-base">Chi theo nhà máy (NM)</CardTitle>
-                <p className="text-xs text-muted-foreground">Nhấn ô để xem chi tiết</p>
+                <p className="text-xs text-muted-foreground">Nhấn biểu đồ để lọc chi tiết</p>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => toggleExpand("plant")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleExpand("plant", "Chi theo nhà máy");
+                }}
                 aria-label={expanded === "plant" ? "Thu nhỏ" : "Phóng to"}
               >
                 {expanded === "plant" ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
               </Button>
             </CardHeader>
-            <CardContent>
+            <CardContent
+              onClick={(e) => e.stopPropagation()}
+            >
               <SpendTreemap data={plantData} onClickBlock={handlePlantClick} />
             </CardContent>
           </Card>
         )}
         {showExpense && (
-          <Card className="shadow-sm">
+          <Card
+            className="cursor-pointer shadow-sm hover:ring-2 hover:ring-primary/30"
+            onClick={() => openAllLines("expense", "Chi theo mã chi phí")}
+          >
             <CardHeader className="flex flex-row items-start justify-between">
               <div>
                 <CardTitle className="text-base">Chi theo mã chi phí (MÃ)</CardTitle>
-                <p className="text-xs text-muted-foreground">Nhấn ô để xem chi tiết</p>
+                <p className="text-xs text-muted-foreground">Nhấn biểu đồ để lọc chi tiết</p>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => toggleExpand("expense")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleExpand("expense", "Chi theo mã chi phí");
+                }}
                 aria-label={expanded === "expense" ? "Thu nhỏ" : "Phóng to"}
               >
                 {expanded === "expense" ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
               </Button>
             </CardHeader>
-            <CardContent>
+            <CardContent onClick={(e) => e.stopPropagation()}>
               <SpendTreemap data={expenseData} onClickBlock={handleExpenseClick} />
             </CardContent>
           </Card>
         )}
       </section>
 
-      {drill && (drill.source === "plant" || drill.source === "expense") && (
-        <div ref={detailRef}>
-          <DetailSheet
-            title={drillTitle}
-            totalAmount={filteredTotal}
-            lines={filteredLines}
-            onClose={handleClose}
-          />
-        </div>
-      )}
+      {renderDetail("plant")}
+      {renderDetail("expense")}
 
       {showMonth && (
-        <Card className="shadow-sm">
+        <Card
+          className="cursor-pointer shadow-sm hover:ring-2 hover:ring-primary/30"
+          onClick={() => openAllLines("month", "Xu hướng chi theo tháng")}
+        >
           <CardHeader className="flex flex-row items-start justify-between">
             <div>
               <CardTitle className="text-base">Xu hướng chi theo tháng</CardTitle>
-              <p className="text-xs text-muted-foreground">Nhấn điểm để xem chi tiết tháng</p>
+              <p className="text-xs text-muted-foreground">Nhấn điểm để lọc chi tiết tháng</p>
             </div>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => toggleExpand("month")}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleExpand("month", "Xu hướng chi theo tháng");
+              }}
               aria-label={expanded === "month" ? "Thu nhỏ" : "Phóng to"}
             >
               {expanded === "month" ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent onClick={(e) => e.stopPropagation()}>
             <SpendAreaChart data={monthData} onClickPoint={handleMonthClick} />
           </CardContent>
         </Card>
       )}
 
-      {drill && drill.source === "month" && (
-        <div ref={detailRef}>
-          <DetailSheet
-            title={drillTitle}
-            totalAmount={filteredTotal}
-            lines={filteredLines}
-            onClose={handleClose}
-          />
-        </div>
-      )}
+      {renderDetail("month")}
     </div>
   );
 }

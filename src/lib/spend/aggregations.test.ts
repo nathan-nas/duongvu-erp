@@ -14,8 +14,8 @@ describe("sumBy", () => {
         "plant_name",
       ),
     ).toEqual([
-      { label: "A", amount: 150 },
-      { label: "B", amount: 20 },
+      { label: "A", amount: 150, count: 2 },
+      { label: "B", amount: 20, count: 1 },
     ]);
   });
 
@@ -29,7 +29,7 @@ describe("sumBy", () => {
         "payment_method",
         1,
       ),
-    ).toEqual([{ label: "TM", amount: 200 }]);
+    ).toEqual([{ label: "TM", amount: 200, count: 1 }]);
   });
 });
 
@@ -43,8 +43,8 @@ describe("sumByMonth", () => {
         { payment_date: null, amount: 99 },
       ]),
     ).toEqual([
-      { label: "2025-01", amount: 50 },
-      { label: "2025-12", amount: 120 },
+      { label: "2025-01", amount: 50, count: 1 },
+      { label: "2025-12", amount: 120, count: 2 },
     ]);
   });
 });
