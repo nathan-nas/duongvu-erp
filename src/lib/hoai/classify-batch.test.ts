@@ -12,4 +12,7 @@ describe("classifyBatchKind", () => {
       "period",
     );
   });
+  it("returns unknown for unrecognized filename", () => {
+    expect(classifyBatchKind("random-export.xlsx", ["Sheet1"])).toBe("unknown");
+  });
 });
