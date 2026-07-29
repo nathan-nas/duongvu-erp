@@ -9,7 +9,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { parseHoaiWorkbook } from "@/lib/hoai/parse-workbook";
 import type { ParsedWorkbookPreview } from "@/lib/hoai/types";
 
@@ -69,18 +68,32 @@ export function UploadWizard() {
         <CardTitle>Chọn file Excel</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-4">
-        <div className="grid gap-2">
-          <Label htmlFor="hoai-file">File Excel</Label>
+        <label
+          htmlFor="hoai-file"
+          className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 px-6 py-10 text-center transition-colors hover:border-primary/50 hover:bg-muted/50"
+        >
+          <span className="text-3xl">📂</span>
+          <span className="text-sm font-medium">
+            Kéo thả hoặc nhấn để chọn file
+          </span>
+          <span className="text-xs text-muted-foreground">
+            Hỗ trợ .xlsx, .xls
+          </span>
           <Input
             id="hoai-file"
             type="file"
             accept=".xlsx,.xls"
             disabled={isParsing}
             onChange={selectFile}
+            className="sr-only"
           />
-        </div>
-        {isParsing && <p aria-live="polite">Đang đọc file…</p>}
-        {error && <p className="text-destructive">{error}</p>}
+        </label>
+        {isParsing && (
+          <p className="text-sm text-muted-foreground" aria-live="polite">
+            Đang đọc file…
+          </p>
+        )}
+        {error && <p className="text-sm text-destructive">{error}</p>}
       </CardContent>
     </Card>
   );

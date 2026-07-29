@@ -10,6 +10,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { sumBy, sumByMonth } from "@/lib/hoai/aggregations";
 import { formatVnd } from "@/lib/hoai/format";
 import { SpendTreemap } from "./spend-treemap";
@@ -138,20 +145,24 @@ export function AnalyticsDashboard({
     <div className="flex flex-col gap-6">
       <Card>
         <CardContent className="pt-4">
-          <label className="grid max-w-xl gap-2 text-sm font-medium">
-            Lô dữ liệu
-            <select
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+          <div className="grid max-w-xl gap-2 text-sm font-medium">
+            <span>Lô dữ liệu</span>
+            <Select
               value={selectedBatchId}
-              onChange={(e) => router.push(`/app/analytics?batch=${e.target.value}`)}
+              onValueChange={(val) => router.push(`/app/analytics?batch=${val}`)}
             >
-              {batches.map((batch) => (
-                <option key={batch.id} value={batch.id}>
-                  {batch.source_filename} — {batch.period_year} ({batchKindLabel[batch.batch_kind]})
-                </option>
-              ))}
-            </select>
-          </label>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {batches.map((batch) => (
+                  <SelectItem key={batch.id} value={batch.id}>
+                    {batch.source_filename} — {batch.period_year} ({batchKindLabel[batch.batch_kind]})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </CardContent>
       </Card>
 
