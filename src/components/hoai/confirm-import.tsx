@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   createImportBatch,
   insertSpendLinesChunk,
+  markImportBatchFailed,
   SPEND_LINE_CHUNK,
 } from "@/app/app/actions/import-spend";
 import { Button } from "@/components/ui/button";
@@ -71,6 +72,7 @@ export function ConfirmImport({
       const result = await insertSpendLinesChunk(batchResult.batchId, chunk);
 
       if (result.error) {
+        await markImportBatchFailed(batchResult.batchId);
         setError(result.error);
         setProgress(null);
         return;

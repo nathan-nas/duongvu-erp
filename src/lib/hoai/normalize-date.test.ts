@@ -9,6 +9,12 @@ describe("parsePaymentDate", () => {
   it("parses 1812 as 2025-12-18", () => {
     expect(parsePaymentDate(1812, 2025).date).toBe("2025-12-18");
   });
+  it("rejects an impossible DDMM calendar date", () => {
+    const result = parsePaymentDate(3102, 2025);
+
+    expect(result.date).toBeNull();
+    expect(result.flags).toContain("invalid_date");
+  });
   it("keeps Excel Date objects", () => {
     const r = parsePaymentDate(new Date(2025, 11, 4), 2025);
     expect(r.date).toBe("2025-12-04");

@@ -79,3 +79,25 @@ export async function insertSpendLinesChunk(
 
   return { error: null };
 }
+
+export async function markImportBatchFailed(
+  batchId: string,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { error: LOGIN_REQUIRED };
+  }
+
+  const { error } = await supabase
+    .from("import_batch")
+    .update({ status: "failed" })
+    .eq("id", batchId)
+    .eq("user_id", user.id);
+
+  return { error: error ? SAVE_FAILED : null };
+}

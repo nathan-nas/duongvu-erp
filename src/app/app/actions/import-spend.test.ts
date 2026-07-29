@@ -13,6 +13,7 @@ vi.mock("@/lib/supabase/server", () => ({
 import {
   createImportBatch,
   insertSpendLinesChunk,
+  markImportBatchFailed,
   SPEND_LINE_CHUNK,
 } from "./import-spend";
 
@@ -61,5 +62,25 @@ describe("import spend server actions", () => {
 
   it("uses the documented chunk size", () => {
     expect(SPEND_LINE_CHUNK).toBe(400);
+  });
+
+  it("marks an owned batch as failed", async () => {
+    getUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    const userIdFilter = vi.fn().mockResolvedValue({ error: null });
+    const batchIdFilter = vi.fn(() => ({ eq: userIdFilter }));
+    const update = vi.fn(() => ({ eq: batchIdFilter }));
+    from.mockReturnValue({ update });
+
+    await expect(markImportBatchFailed("batch-1")).resolves.toEqual({
+      error: null,
+    });
+
+    expect(from).toHaveBeenCalledWith("import_batch");
+    expect(update).toHaveBeenCalledWith({ status: "failed" });
+    expect(batchIdFilter).toHaveBeenCalledWith("id", "batch-1");
+    expect(userIdFilter).toHaveBeenCalledWith("user_id", "user-1");
   });
 });

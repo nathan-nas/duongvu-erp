@@ -2,6 +2,19 @@ function pad(n: number) {
   return String(n).padStart(2, "0");
 }
 
+function formatValidDate(year: number, month: number, day: number): string | null {
+  const date = new Date(year, month - 1, day);
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return `${year}-${pad(month)}-${pad(day)}`;
+}
+
 export function parsePaymentDate(
   raw: unknown,
   periodYear: number,
@@ -39,11 +52,13 @@ export function parsePaymentDate(
       flags.push("invalid_date");
       return { date: null, raw: s, flags };
     }
-    return {
-      date: `${periodYear}-${pad(month)}-${pad(day)}`,
-      raw: s,
-      flags,
-    };
+    const date = formatValidDate(periodYear, month, day);
+    if (!date) {
+      flags.push("invalid_date");
+      return { date: null, raw: s, flags };
+    }
+
+    return { date, raw: s, flags };
   }
   const str = String(raw).trim();
   const dmy = str.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
@@ -52,11 +67,13 @@ export function parsePaymentDate(
     const month = Number(dmy[2]);
     let year = Number(dmy[3]);
     if (year < 100) year += 2000;
-    return {
-      date: `${year}-${pad(month)}-${pad(day)}`,
-      raw: str,
-      flags,
-    };
+    const date = formatValidDate(year, month, day);
+    if (!date) {
+      flags.push("invalid_date");
+      return { date: null, raw: str, flags };
+    }
+
+    return { date, raw: str, flags };
   }
   flags.push("invalid_date");
   return { date: null, raw: str, flags };
