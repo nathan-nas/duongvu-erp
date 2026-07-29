@@ -25,7 +25,7 @@ export default async function AnalyticsPage({
   const supabase = await createClient();
   const { data: batchRows } = await supabase
     .from("import_batch")
-    .select("id, source_filename, period_year, batch_kind")
+    .select("id, source_filename, period_year, batch_kind, fact_rows, amount_sum")
     .order("created_at", { ascending: false });
   const batches: AnalyticsBatch[] = (batchRows ?? []).map((batch) => ({
     id: String(batch.id),
@@ -35,6 +35,8 @@ export default async function AnalyticsPage({
       batch.batch_kind === "annual" || batch.batch_kind === "period"
         ? batch.batch_kind
         : "unknown",
+    fact_rows: Number(batch.fact_rows ?? 0),
+    amount_sum: Number(batch.amount_sum ?? 0),
   }));
   const params = await searchParams;
   const requestedBatchId =
@@ -42,27 +44,16 @@ export default async function AnalyticsPage({
   const selectedBatchId = batches.some((batch) => batch.id === requestedBatchId)
     ? requestedBatchId!
     : (batches[0]?.id ?? null);
-  const lineRows: typeof lines = [];
-  if (selectedBatchId) {
-    const PAGE = 1000;
-    let from = 0;
-    let done = false;
-    while (!done) {
-      const { data } = await supabase
+  const { data: lineRows } = selectedBatchId
+    ? await supabase
         .from("spend_line")
         .select(
           "id, payment_date, party_code, party_name, item_code, item_name, uom, qty, unit_price, amount, plant_name, expense_code, payment_method, description, invoice, note",
         )
         .eq("batch_id", selectedBatchId)
         .order("payment_date", { ascending: true })
-        .range(from, from + PAGE - 1);
-      const rows = data ?? [];
-      lineRows.push(...(rows as typeof lineRows));
-      if (rows.length < PAGE) done = true;
-      else from += PAGE;
-    }
-  }
-  const lines: AnalyticsLine[] = (lineRows ?? []).map((line) => ({
+    : { data: [] };
+  const lines: AnalyticsLine[] = (lineRows ?? []).map((line: Record<string, unknown>) => ({
     id: String(line.id),
     payment_date: stringOrNull(line.payment_date),
     party_code: stringOrNull(line.party_code),

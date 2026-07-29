@@ -30,6 +30,8 @@ export type AnalyticsBatch = {
   source_filename: string;
   period_year: number;
   batch_kind: "annual" | "period" | "unknown";
+  fact_rows: number;
+  amount_sum: number;
 };
 
 export type AnalyticsLine = {
@@ -151,14 +153,16 @@ export function AnalyticsDashboard({
     );
   }
 
-  const totalAmount = lines.reduce((t, l) => t + (l.amount ?? 0), 0);
+  const selectedBatch = batches.find((b) => b.id === selectedBatchId)!;
+  const totalAmount = selectedBatch.amount_sum;
+  const factRows = selectedBatch.fact_rows;
   const plantCount = new Set(lines.map((l) => l.plant_name?.trim()).filter(Boolean)).size;
   const expenseCodeCount = new Set(lines.map((l) => l.expense_code?.trim()).filter(Boolean)).size;
 
   type KpiDef = { label: string; value: string; drillField: DrillField; drillValue: string; drillLabel: string };
   const kpis: KpiDef[] = [
     { label: "Tổng chi", value: formatVnd(totalAmount), drillField: "all", drillValue: "", drillLabel: "Tất cả dòng chi" },
-    { label: "Số dòng", value: new Intl.NumberFormat("vi-VN").format(lines.length), drillField: "all", drillValue: "", drillLabel: "Tất cả dòng chi" },
+    { label: "Số dòng", value: new Intl.NumberFormat("vi-VN").format(factRows), drillField: "all", drillValue: "", drillLabel: "Tất cả dòng chi" },
     { label: "Số nhà máy", value: String(plantCount), drillField: "all", drillValue: "", drillLabel: "Tất cả nhà máy" },
     { label: "Số mã chi", value: String(expenseCodeCount), drillField: "all", drillValue: "", drillLabel: "Tất cả mã chi" },
   ];
