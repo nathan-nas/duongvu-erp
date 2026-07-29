@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Maximize2, Minimize2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -22,6 +23,7 @@ import { formatVnd } from "@/lib/hoai/format";
 import { SpendTreemap } from "./spend-treemap";
 import { SpendAreaChart } from "./spend-area-chart";
 import { DetailSheet } from "./detail-sheet";
+import { cn } from "@/lib/utils";
 
 export type AnalyticsBatch = {
   id: string;
@@ -66,6 +68,8 @@ type DrillState = {
   value: string;
 } | null;
 
+type ExpandedCard = "plant" | "expense" | "month" | null;
+
 export function AnalyticsDashboard({
   batches,
   selectedBatchId,
@@ -73,6 +77,7 @@ export function AnalyticsDashboard({
 }: AnalyticsDashboardProps) {
   const router = useRouter();
   const [drill, setDrill] = useState<DrillState>(null);
+  const [expanded, setExpanded] = useState<ExpandedCard>(null);
 
   const plantData = useMemo(() => sumBy(lines, "plant_name", 15), [lines]);
   const expenseData = useMemo(() => sumBy(lines, "expense_code", 15), [lines]);
@@ -108,6 +113,10 @@ export function AnalyticsDashboard({
 
   const handleClose = useCallback(() => setDrill(null), []);
 
+  function toggleExpand(card: ExpandedCard) {
+    setExpanded((prev) => (prev === card ? null : card));
+  }
+
   if (batches.length === 0 || !selectedBatchId) {
     return (
       <Card>
@@ -126,7 +135,7 @@ export function AnalyticsDashboard({
   const plantCount = new Set(lines.map((l) => l.plant_name?.trim()).filter(Boolean)).size;
   const expenseCodeCount = new Set(lines.map((l) => l.expense_code?.trim()).filter(Boolean)).size;
 
-  const cards = [
+  const kpis = [
     { label: "Tổng chi", value: formatVnd(totalAmount) },
     { label: "Số dòng", value: new Intl.NumberFormat("vi-VN").format(lines.length) },
     { label: "Số nhà máy", value: String(plantCount) },
@@ -140,6 +149,10 @@ export function AnalyticsDashboard({
         ? `Mã: ${drill.value}`
         : `Tháng: ${drill.value}`
     : "";
+
+  const showPlant = expanded === null || expanded === "plant";
+  const showExpense = expanded === null || expanded === "expense";
+  const showMonth = expanded === null || expanded === "month";
 
   return (
     <div className="flex flex-col gap-6">
@@ -167,48 +180,84 @@ export function AnalyticsDashboard({
       </Card>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Chỉ số tổng quan">
-        {cards.map((card) => (
-          <Card key={card.label} className="shadow-sm">
+        {kpis.map((kpi) => (
+          <Card key={kpi.label} className="shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground">{card.label}</CardTitle>
+              <CardTitle className="text-xs font-medium text-muted-foreground">{kpi.label}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{card.value}</p>
+              <p className="text-2xl font-bold">{kpi.value}</p>
             </CardContent>
           </Card>
         ))}
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-2">
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base">Chi theo nhà máy (NM)</CardTitle>
-            <p className="text-xs text-muted-foreground">Nhấn vào ô để xem chi tiết</p>
-          </CardHeader>
-          <CardContent>
-            <SpendTreemap data={plantData} onClickBlock={handlePlantClick} />
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base">Chi theo mã chi phí (MÃ)</CardTitle>
-            <p className="text-xs text-muted-foreground">Nhấn vào ô để xem chi tiết</p>
-          </CardHeader>
-          <CardContent>
-            <SpendTreemap data={expenseData} onClickBlock={handleExpenseClick} />
-          </CardContent>
-        </Card>
+      <section className={cn("grid gap-6", expanded === null && "lg:grid-cols-2")}>
+        {showPlant && (
+          <Card className="shadow-sm">
+            <CardHeader className="flex flex-row items-start justify-between">
+              <div>
+                <CardTitle className="text-base">Chi theo nhà máy (NM)</CardTitle>
+                <p className="text-xs text-muted-foreground">Nhấn ô để xem chi tiết</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => toggleExpand("plant")}
+                aria-label={expanded === "plant" ? "Thu nhỏ" : "Phóng to"}
+              >
+                {expanded === "plant" ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <SpendTreemap data={plantData} onClickBlock={handlePlantClick} />
+            </CardContent>
+          </Card>
+        )}
+        {showExpense && (
+          <Card className="shadow-sm">
+            <CardHeader className="flex flex-row items-start justify-between">
+              <div>
+                <CardTitle className="text-base">Chi theo mã chi phí (MÃ)</CardTitle>
+                <p className="text-xs text-muted-foreground">Nhấn ô để xem chi tiết</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => toggleExpand("expense")}
+                aria-label={expanded === "expense" ? "Thu nhỏ" : "Phóng to"}
+              >
+                {expanded === "expense" ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <SpendTreemap data={expenseData} onClickBlock={handleExpenseClick} />
+            </CardContent>
+          </Card>
+        )}
       </section>
 
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base">Xu hướng chi theo tháng</CardTitle>
-          <p className="text-xs text-muted-foreground">Nhấn vào điểm để xem chi tiết tháng</p>
-        </CardHeader>
-        <CardContent>
-          <SpendAreaChart data={monthData} onClickPoint={handleMonthClick} />
-        </CardContent>
-      </Card>
+      {showMonth && (
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-start justify-between">
+            <div>
+              <CardTitle className="text-base">Xu hướng chi theo tháng</CardTitle>
+              <p className="text-xs text-muted-foreground">Nhấn điểm để xem chi tiết tháng</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => toggleExpand("month")}
+              aria-label={expanded === "month" ? "Thu nhỏ" : "Phóng to"}
+            >
+              {expanded === "month" ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <SpendAreaChart data={monthData} onClickPoint={handleMonthClick} />
+          </CardContent>
+        </Card>
+      )}
 
       <DetailSheet
         open={drill !== null}
