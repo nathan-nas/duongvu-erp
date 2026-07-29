@@ -7,7 +7,7 @@ import {
   insertSpendLinesChunk,
   markImportBatchFailed,
 } from "@/app/app/actions/import-spend";
-import { SPEND_LINE_CHUNK } from "@/lib/hoai/constants";
+import { SPEND_LINE_CHUNK } from "@/lib/spend/constants";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,9 +18,9 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { formatVnd } from "@/lib/hoai/format";
-import { parseHoaiWorkbook } from "@/lib/hoai/parse-workbook";
-import type { ParsedWorkbookPreview } from "@/lib/hoai/types";
+import { formatVnd } from "@/lib/spend/format";
+import { parseSpendWorkbook } from "@/lib/spend/parse-workbook";
+import type { ParsedWorkbookPreview } from "@/lib/spend/types";
 
 const batchKindLabel = {
   annual: "Cả năm",
@@ -52,7 +52,7 @@ export function ConfirmImport({
     setError(null);
     setProgress(0);
 
-    const parsed = parseHoaiWorkbook(file, filename, periodYear);
+    const parsed = parseSpendWorkbook(file, filename, periodYear);
     const batchResult = await createImportBatch({
       source_filename: filename,
       period_year: periodYear,

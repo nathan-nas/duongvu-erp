@@ -1,9 +1,9 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import type { BatchKind, SpendLineDraft } from "@/lib/hoai/types";
+import type { BatchKind, SpendLineDraft } from "@/lib/spend/types";
 
-import { SPEND_LINE_CHUNK } from "@/lib/hoai/constants";
+import { SPEND_LINE_CHUNK } from "@/lib/spend/constants";
 
 const LOGIN_REQUIRED = "Bạn cần đăng nhập.";
 const SAVE_FAILED = "Không lưu được dữ liệu.";

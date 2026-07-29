@@ -9,7 +9,7 @@ export default function HomePage() {
       <div className="flex flex-col gap-2">
         <p className="text-sm font-medium text-muted-foreground">Dương Vũ</p>
         <h1 className="text-3xl font-semibold tracking-tight">
-          Quản lý chi phí HOAI
+          Quản lý chi phí
         </h1>
         <p className="max-w-xl text-muted-foreground">
           Tải lên file Excel, phân tích chi phí theo nhà máy và mã chi. Đăng nhập để bắt đầu.

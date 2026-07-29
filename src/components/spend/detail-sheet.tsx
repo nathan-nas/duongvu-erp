@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { AnalyticsLine } from "./analytics-dashboard";
-import { formatVnd, formatViDate } from "@/lib/hoai/format";
+import { formatVnd, formatViDate } from "@/lib/spend/format";
 
 type Props = {
   open: boolean;

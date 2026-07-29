@@ -9,8 +9,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { SpendAggregate } from "@/lib/hoai/aggregations";
-import { formatVnd } from "@/lib/hoai/format";
+import type { SpendAggregate } from "@/lib/spend/aggregations";
+import { formatVnd } from "@/lib/spend/format";
 
 export function SpendBarChart({ data }: { data: SpendAggregate[] }) {
   if (data.length === 0) {

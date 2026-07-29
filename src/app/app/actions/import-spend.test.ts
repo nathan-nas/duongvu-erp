@@ -15,7 +15,7 @@ import {
   insertSpendLinesChunk,
   markImportBatchFailed,
 } from "./import-spend";
-import { SPEND_LINE_CHUNK } from "@/lib/hoai/constants";
+import { SPEND_LINE_CHUNK } from "@/lib/spend/constants";
 
 describe("import spend server actions", () => {
   beforeEach(() => {

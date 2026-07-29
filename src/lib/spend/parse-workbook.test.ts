@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
 import { describe, expect, it } from "vitest";
-import { parseHoaiWorkbook } from "./parse-workbook";
+import { parseSpendWorkbook } from "./parse-workbook";
 
 function workbookBuffer(): ArrayBuffer {
   const factSheet = XLSX.utils.aoa_to_sheet([
@@ -46,9 +46,9 @@ function workbookBuffer(): ArrayBuffer {
   return XLSX.write(workbook, { type: "array", bookType: "xlsx" });
 }
 
-describe("parseHoaiWorkbook", () => {
+describe("parseSpendWorkbook", () => {
   it("maps fact rows from the normalized BẢNG CHI TIẾT sheet", () => {
-    const preview = parseHoaiWorkbook(workbookBuffer(), "vật tư T5-2025.xlsx");
+    const preview = parseSpendWorkbook(workbookBuffer(), "vật tư T5-2025.xlsx");
 
     expect(preview.hasFactSheet).toBe(true);
     expect(preview.batchKind).toBe("period");
@@ -72,7 +72,7 @@ describe("parseHoaiWorkbook", () => {
     ]);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, sheet, "BANG CHI TIET");
-    const preview = parseHoaiWorkbook(
+    const preview = parseSpendWorkbook(
       XLSX.write(workbook, { type: "array", bookType: "xlsx" }),
       "vật tư T5-2025.xlsx",
       2026,

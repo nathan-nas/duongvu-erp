@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ChangeEvent } from "react";
-import { ConfirmImport } from "@/components/hoai/confirm-import";
+import { ConfirmImport } from "@/components/spend/confirm-import";
 import {
   Card,
   CardContent,
@@ -9,8 +9,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { parseHoaiWorkbook } from "@/lib/hoai/parse-workbook";
-import type { ParsedWorkbookPreview } from "@/lib/hoai/types";
+import { parseSpendWorkbook } from "@/lib/spend/parse-workbook";
+import type { ParsedWorkbookPreview } from "@/lib/spend/types";
 
 type UploadState = {
   file: ArrayBuffer;
@@ -33,7 +33,7 @@ export function UploadWizard() {
 
     try {
       const file = await selectedFile.arrayBuffer();
-      const preview = parseHoaiWorkbook(file, selectedFile.name);
+      const preview = parseSpendWorkbook(file, selectedFile.name);
 
       if (!preview.hasFactSheet || preview.factRows === 0) {
         setError(
@@ -69,7 +69,7 @@ export function UploadWizard() {
       </CardHeader>
       <CardContent className="grid gap-4">
         <label
-          htmlFor="hoai-file"
+          htmlFor="spend-file"
           className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 px-6 py-10 text-center transition-colors hover:border-primary/50 hover:bg-muted/50"
         >
           <span className="text-3xl">📂</span>
@@ -80,7 +80,7 @@ export function UploadWizard() {
             Hỗ trợ .xlsx, .xls
           </span>
           <Input
-            id="hoai-file"
+            id="spend-file"
             type="file"
             accept=".xlsx,.xls"
             disabled={isParsing}

@@ -2,7 +2,7 @@ import {
   AnalyticsDashboard,
   type AnalyticsBatch,
   type AnalyticsLine,
-} from "@/components/hoai/analytics-dashboard";
+} from "@/components/spend/analytics-dashboard";
 import { createClient } from "@/lib/supabase/server";
 
 type AnalyticsPageProps = {

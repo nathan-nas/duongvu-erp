@@ -30,7 +30,7 @@ function dateCellValue(cell: XLSX.CellObject | undefined, date1904: boolean) {
   return date ? new Date(date.y, date.m - 1, date.d) : cell.v;
 }
 
-export function parseHoaiWorkbook(
+export function parseSpendWorkbook(
   file: ArrayBuffer,
   filename: string,
   periodYearOverride?: number,

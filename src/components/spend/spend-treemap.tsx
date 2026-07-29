@@ -1,8 +1,8 @@
 "use client";
 
 import { Treemap, ResponsiveContainer, Tooltip } from "recharts";
-import type { SpendAggregate } from "@/lib/hoai/aggregations";
-import { formatVnd } from "@/lib/hoai/format";
+import type { SpendAggregate } from "@/lib/spend/aggregations";
+import { formatVnd } from "@/lib/spend/format";
 
 const COLORS = [
   "#2563eb", "#7c3aed", "#db2777", "#ea580c", "#d97706",
