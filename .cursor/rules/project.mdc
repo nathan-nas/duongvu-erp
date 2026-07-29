@@ -1,0 +1,13 @@
+---
+description: Stack, layout, and YAGNI constraints for duongvu-erp
+alwaysApply: true
+---
+
+# Project rules
+
+- Stack: Next.js App Router, TypeScript, Tailwind, shadcn/ui, Zustand (UI only), Supabase, Vercel-only deploy.
+- Agents follow AGENTS.md: design → plan → implement → `pnpm lint && pnpm typecheck && pnpm test`.
+- No org/business schema until product is defined. Auth user only.
+- No service-role keys in client or `NEXT_PUBLIC_*` env vars.
+- Prefer surgical diffs; no speculative abstractions or extra features.
+- Specs live in `docs/superpowers/specs/`; plans in `docs/superpowers/plans/`.
