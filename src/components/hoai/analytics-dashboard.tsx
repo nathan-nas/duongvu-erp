@@ -143,7 +143,7 @@ export function AnalyticsDashboard({
 
   return (
     <div className="flex flex-col gap-6">
-      <Card>
+      <Card className="shadow-sm">
         <CardContent className="pt-4">
           <div className="grid max-w-xl gap-2 text-sm font-medium">
             <span>Lô dữ liệu</span>
@@ -168,28 +168,30 @@ export function AnalyticsDashboard({
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Chỉ số tổng quan">
         {cards.map((card) => (
-          <Card key={card.label}>
-            <CardHeader>
-              <CardTitle className="text-sm text-muted-foreground">{card.label}</CardTitle>
+          <Card key={card.label} className="shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground">{card.label}</CardTitle>
             </CardHeader>
-            <CardContent className="text-xl font-semibold">{card.value}</CardContent>
+            <CardContent>
+              <p className="text-2xl font-bold">{card.value}</p>
+            </CardContent>
           </Card>
         ))}
       </section>
 
       <section className="grid gap-6 lg:grid-cols-2">
-        <Card>
+        <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle>Chi theo nhà máy (NM)</CardTitle>
+            <CardTitle className="text-base">Chi theo nhà máy (NM)</CardTitle>
             <p className="text-xs text-muted-foreground">Nhấn vào ô để xem chi tiết</p>
           </CardHeader>
           <CardContent>
             <SpendTreemap data={plantData} onClickBlock={handlePlantClick} />
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle>Chi theo mã chi phí (MÃ)</CardTitle>
+            <CardTitle className="text-base">Chi theo mã chi phí (MÃ)</CardTitle>
             <p className="text-xs text-muted-foreground">Nhấn vào ô để xem chi tiết</p>
           </CardHeader>
           <CardContent>
@@ -198,9 +200,9 @@ export function AnalyticsDashboard({
         </Card>
       </section>
 
-      <Card>
+      <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle>Xu hướng chi theo tháng</CardTitle>
+          <CardTitle className="text-base">Xu hướng chi theo tháng</CardTitle>
           <p className="text-xs text-muted-foreground">Nhấn vào điểm để xem chi tiết tháng</p>
         </CardHeader>
         <CardContent>

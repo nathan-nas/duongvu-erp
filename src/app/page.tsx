@@ -7,7 +7,7 @@ export default function HomePage() {
   return (
     <main className="mx-auto flex min-h-full w-full max-w-3xl flex-1 flex-col justify-center gap-6 px-6 py-16">
       <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium text-muted-foreground">duongvu-erp</p>
+        <p className="text-sm font-medium text-muted-foreground">Dương Vũ</p>
         <h1 className="text-3xl font-semibold tracking-tight">
           Quản lý chi phí HOAI
         </h1>
