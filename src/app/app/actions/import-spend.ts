@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { BatchKind, SpendLineDraft } from "@/lib/hoai/types";
 
-export const SPEND_LINE_CHUNK = 400;
+import { SPEND_LINE_CHUNK } from "@/lib/hoai/constants";
 
 const LOGIN_REQUIRED = "Bạn cần đăng nhập.";
 const SAVE_FAILED = "Không lưu được dữ liệu.";
