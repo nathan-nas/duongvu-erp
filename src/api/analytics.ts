@@ -141,12 +141,14 @@ export async function fetchSpendAggregates(input: {
   };
 }
 
-/** Loads every matching spend line (chunked RPC calls). */
-export async function fetchSpendLines(input: {
+/** Loads one page of matching spend lines. */
+export async function fetchSpendLinesPage(input: {
   from: string;
   to: string;
   filterKind: SpendFilterKind;
   filterValue: string;
+  offset?: number;
+  limit?: number;
 }): Promise<
   { lines: AnalyticsLine[]; totalCount: number; totalAmount: number } | { error: string }
 > {
@@ -158,39 +160,90 @@ export async function fetchSpendLines(input: {
     return { error: "Bạn cần đăng nhập." };
   }
 
+  const limit = input.limit ?? SPEND_LINE_CHUNK;
+  const offset = input.offset ?? 0;
+
+  const { data, error } = await supabase.rpc("spend_lines_page", {
+    p_from: input.from,
+    p_to: input.to,
+    p_filter_kind: input.filterKind,
+    p_filter_value: input.filterValue,
+    p_limit: limit,
+    p_offset: offset,
+  });
+
+  if (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("spend_lines_page", error);
+    }
+    return { error: "Không tải được dữ liệu." };
+  }
+
+  const rows = (data ?? []) as Record<string, unknown>[];
+  const totalCount = rows.length > 0 ? Number(rows[0].total_count) || 0 : 0;
+  const totalAmount = rows.length > 0 ? Number(rows[0].total_amount) || 0 : 0;
+
+  return { lines: mapLineRows(rows), totalCount, totalAmount };
+}
+
+/**
+ * Loads matching spend lines in chunks.
+ * Caps auto-load so full-year dumps (~80k) do not time out the server action.
+ */
+export async function fetchSpendLines(input: {
+  from: string;
+  to: string;
+  filterKind: SpendFilterKind;
+  filterValue: string;
+  maxRows?: number;
+}): Promise<
+  | {
+      lines: AnalyticsLine[];
+      totalCount: number;
+      totalAmount: number;
+      truncated: boolean;
+    }
+  | { error: string }
+> {
+  const maxRows = input.maxRows ?? SPEND_LINE_CHUNK * 5;
   const lines: AnalyticsLine[] = [];
   let totalCount = 0;
   let totalAmount = 0;
   let offset = 0;
 
   for (;;) {
-    const { data, error } = await supabase.rpc("spend_lines_page", {
-      p_from: input.from,
-      p_to: input.to,
-      p_filter_kind: input.filterKind,
-      p_filter_value: input.filterValue,
-      p_limit: SPEND_LINE_CHUNK,
-      p_offset: offset,
+    const page = await fetchSpendLinesPage({
+      ...input,
+      offset,
+      limit: SPEND_LINE_CHUNK,
     });
-
-    if (error) {
-      return { error: "Không tải được dữ liệu." };
+    if ("error" in page) {
+      return page;
     }
 
-    const rows = (data ?? []) as Record<string, unknown>[];
-    if (rows.length === 0) {
+    if (page.lines.length === 0) {
+      totalCount = page.totalCount;
+      totalAmount = page.totalAmount;
       break;
     }
 
-    totalCount = Number(rows[0].total_count) || 0;
-    totalAmount = Number(rows[0].total_amount) || 0;
-    lines.push(...mapLineRows(rows));
+    totalCount = page.totalCount;
+    totalAmount = page.totalAmount;
+    lines.push(...page.lines);
 
-    if (lines.length >= totalCount || rows.length < SPEND_LINE_CHUNK) {
+    if (lines.length >= totalCount || page.lines.length < SPEND_LINE_CHUNK) {
+      break;
+    }
+    if (lines.length >= maxRows) {
       break;
     }
     offset += SPEND_LINE_CHUNK;
   }
 
-  return { lines, totalCount, totalAmount };
+  return {
+    lines,
+    totalCount,
+    totalAmount,
+    truncated: lines.length < totalCount,
+  };
 }

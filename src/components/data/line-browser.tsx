@@ -2,11 +2,15 @@
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchSpendLines, type AnalyticsLine } from "@/api/analytics";
+import {
+  fetchSpendLinesPage,
+  type AnalyticsLine,
+} from "@/api/analytics";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
+import { SPEND_LINE_CHUNK } from "@/lib/spend/constants";
 import { isIsoDate } from "@/lib/spend/date-range";
 import { DetailSheet } from "@/components/spend/detail-sheet";
 
@@ -24,31 +28,47 @@ export function LineBrowser({ boundsMin, boundsMax }: Props) {
   const [totalCount, setTotalCount] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
-  const load = useCallback(async (rangeFrom: string, rangeTo: string) => {
-    setLoading(true);
-    setError(null);
-    const result = await fetchSpendLines({
-      from: rangeFrom,
-      to: rangeTo,
-      filterKind: "all",
-      filterValue: "",
-    });
-    setLoading(false);
-    if ("error" in result) {
-      setError(result.error);
-      setLines([]);
-      setTotalCount(0);
-      setTotalAmount(0);
-      return;
-    }
-    setLines(result.lines);
-    setTotalCount(result.totalCount);
-    setTotalAmount(result.totalAmount);
-    setLoaded(true);
-  }, []);
+  const loadPage = useCallback(
+    async (rangeFrom: string, rangeTo: string, offset: number, append: boolean) => {
+      if (append) setLoadingMore(true);
+      else {
+        setLoading(true);
+        setError(null);
+      }
+
+      const result = await fetchSpendLinesPage({
+        from: rangeFrom,
+        to: rangeTo,
+        filterKind: "all",
+        filterValue: "",
+        offset,
+        limit: SPEND_LINE_CHUNK,
+      });
+
+      if (append) setLoadingMore(false);
+      else setLoading(false);
+
+      if ("error" in result) {
+        setError(result.error);
+        if (!append) {
+          setLines([]);
+          setTotalCount(0);
+          setTotalAmount(0);
+        }
+        return;
+      }
+
+      setTotalCount(result.totalCount);
+      setTotalAmount(result.totalAmount);
+      setLines((prev) => (append ? [...prev, ...result.lines] : result.lines));
+      setLoaded(true);
+    },
+    [],
+  );
 
   function apply() {
     setFormError(null);
@@ -60,15 +80,17 @@ export function LineBrowser({ boundsMin, boundsMax }: Props) {
       setFormError("Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.");
       return;
     }
-    void load(from, to);
+    void loadPage(from, to, 0, false);
   }
 
   function handleMutated() {
     if (isIsoDate(from) && isIsoDate(to)) {
-      void load(from, to);
+      void loadPage(from, to, 0, false);
     }
     router.refresh();
   }
+
+  const hasMore = lines.length < totalCount;
 
   return (
     <div className="flex flex-col gap-4">
@@ -109,18 +131,33 @@ export function LineBrowser({ boundsMin, boundsMax }: Props) {
       </Card>
 
       {loaded || loading || error ? (
-        <DetailSheet
-          title="Dòng chi theo kỳ"
-          totalAmount={totalAmount}
-          lines={lines}
-          totalCount={totalCount}
-          loading={loading}
-          error={error}
-          editable
-          showClose={false}
-          onLinesChanged={handleMutated}
-          onClose={() => undefined}
-        />
+        <div className="flex flex-col gap-3">
+          <DetailSheet
+            title="Dòng chi theo kỳ"
+            totalAmount={totalAmount}
+            lines={lines}
+            totalCount={totalCount}
+            loading={loading}
+            error={error}
+            editable
+            showClose={false}
+            onLinesChanged={handleMutated}
+            onClose={() => undefined}
+          />
+          {hasMore && !loading && !error ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="self-center"
+              disabled={loadingMore}
+              onClick={() => void loadPage(from, to, lines.length, true)}
+            >
+              {loadingMore
+                ? "Đang tải thêm…"
+                : `Tải thêm (${lines.length.toLocaleString("vi-VN")} / ${totalCount.toLocaleString("vi-VN")})`}
+            </Button>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

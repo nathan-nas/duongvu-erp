@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import NumberFlow from "@number-flow/react";
 import { BarChart3, Maximize2, Minimize2 } from "lucide-react";
 import {
-  fetchSpendLines,
+  fetchSpendLinesPage,
   type AnalyticsLine,
   type SpendFilterKind,
 } from "@/api/analytics";
@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import type { SpendAggregate } from "@/lib/spend/aggregations";
+import { SPEND_LINE_CHUNK } from "@/lib/spend/constants";
 import { isIsoDate } from "@/lib/spend/date-range";
 import { SpendTreemap } from "./spend-treemap";
 import { SpendAreaChart } from "./spend-area-chart";
@@ -93,32 +94,43 @@ export function AnalyticsDashboard({
   const [pageTotalCount, setPageTotalCount] = useState(0);
   const [pageTotalAmount, setPageTotalAmount] = useState(0);
   const [pageLoading, setPageLoading] = useState(false);
+  const [pageLoadingMore, setPageLoadingMore] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
 
   const hasRange = Boolean(from && to && !rangeError);
 
   const loadLines = useCallback(
-    async (field: SpendFilterKind, value: string) => {
+    async (field: SpendFilterKind, value: string, offset = 0, append = false) => {
       if (!from || !to) return;
-      setPageLoading(true);
-      setPageError(null);
-      const result = await fetchSpendLines({
+      if (append) setPageLoadingMore(true);
+      else {
+        setPageLoading(true);
+        setPageError(null);
+      }
+      const result = await fetchSpendLinesPage({
         from,
         to,
         filterKind: field,
         filterValue: value,
+        offset,
+        limit: SPEND_LINE_CHUNK,
       });
-      setPageLoading(false);
+      if (append) setPageLoadingMore(false);
+      else setPageLoading(false);
       if ("error" in result) {
         setPageError(result.error);
-        setPageLines([]);
-        setPageTotalCount(0);
-        setPageTotalAmount(0);
+        if (!append) {
+          setPageLines([]);
+          setPageTotalCount(0);
+          setPageTotalAmount(0);
+        }
         return;
       }
-      setPageLines(result.lines);
       setPageTotalCount(result.totalCount);
       setPageTotalAmount(result.totalAmount);
+      setPageLines((prev) =>
+        append ? [...prev, ...result.lines] : result.lines,
+      );
     },
     [from, to],
   );
@@ -126,7 +138,7 @@ export function AnalyticsDashboard({
   const openLinesDrill = useCallback(
     (next: Extract<DrillState, { kind: "lines" }>) => {
       setDrill(next);
-      void loadLines(next.field, next.value);
+      void loadLines(next.field, next.value, 0, false);
       scrollToDetail();
     },
     [loadLines],
@@ -314,19 +326,42 @@ export function AnalyticsDashboard({
             onClose={handleClose}
           />
         ) : (
-          <DetailSheet
-            title={drill.title}
-            totalAmount={pageTotalAmount}
-            lines={pageLines}
-            totalCount={pageTotalCount}
-            loading={pageLoading}
-            error={pageError}
-            editable
-            onLinesChanged={() => {
-              void loadLines(drill.field, drill.value);
-            }}
-            onClose={handleClose}
-          />
+          <>
+            <DetailSheet
+              title={drill.title}
+              totalAmount={pageTotalAmount}
+              lines={pageLines}
+              totalCount={pageTotalCount}
+              loading={pageLoading}
+              error={pageError}
+              editable
+              onLinesChanged={() => {
+                void loadLines(drill.field, drill.value, 0, false);
+              }}
+              onClose={handleClose}
+            />
+            {pageLines.length < pageTotalCount && !pageLoading && !pageError ? (
+              <div className="flex justify-center pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={pageLoadingMore}
+                  onClick={() =>
+                    void loadLines(
+                      drill.field,
+                      drill.value,
+                      pageLines.length,
+                      true,
+                    )
+                  }
+                >
+                  {pageLoadingMore
+                    ? "Đang tải thêm…"
+                    : `Tải thêm (${pageLines.length.toLocaleString("vi-VN")} / ${pageTotalCount.toLocaleString("vi-VN")})`}
+                </Button>
+              </div>
+            ) : null}
+          </>
         )}
       </div>
     );
