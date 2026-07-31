@@ -22,10 +22,27 @@ export function LoginForm() {
   const [state, formAction, pending] = useActionState(signIn, initialState);
 
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader>
-        <CardTitle>Đăng nhập</CardTitle>
-        <CardDescription>Sử dụng email và mật khẩu của bạn.</CardDescription>
+    <Card className="w-full border-border/70 bg-card/95 shadow-lg shadow-black/5 backdrop-blur-sm">
+      <CardHeader className="gap-3">
+        <div className="flex items-center gap-3 lg:hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/logo.png"
+            alt="Dương Vũ"
+            width={36}
+            height={36}
+            className="size-9 rounded-md object-contain"
+          />
+          <span className="font-display text-sm font-semibold">
+            Dương Vũ
+          </span>
+        </div>
+        <CardTitle className="font-display text-2xl">
+          Đăng nhập
+        </CardTitle>
+        <CardDescription>
+          Sử dụng email và mật khẩu của bạn để vào hệ thống quản lý chi phí.
+        </CardDescription>
       </CardHeader>
       <form action={formAction}>
         <CardContent className="flex flex-col gap-4">
@@ -62,7 +79,10 @@ export function LoginForm() {
           </Button>
           <p className="text-sm text-muted-foreground">
             Chưa có tài khoản?{" "}
-            <Link href="/signup" className="text-foreground underline">
+            <Link
+              href="/signup"
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
               Đăng ký
             </Link>
           </p>

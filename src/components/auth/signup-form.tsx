@@ -22,10 +22,27 @@ export function SignupForm() {
   const [state, formAction, pending] = useActionState(signUp, initialState);
 
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader>
-        <CardTitle>Tạo tài khoản</CardTitle>
-        <CardDescription>Đăng ký bằng email và mật khẩu.</CardDescription>
+    <Card className="w-full border-border/70 bg-card/95 shadow-lg shadow-black/5 backdrop-blur-sm">
+      <CardHeader className="gap-3">
+        <div className="flex items-center gap-3 lg:hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/logo.png"
+            alt="Dương Vũ"
+            width={36}
+            height={36}
+            className="size-9 rounded-md object-contain"
+          />
+          <span className="font-display text-sm font-semibold">
+            Dương Vũ
+          </span>
+        </div>
+        <CardTitle className="font-display text-2xl">
+          Tạo tài khoản
+        </CardTitle>
+        <CardDescription>
+          Đăng ký bằng email và mật khẩu để bắt đầu theo dõi chi phí.
+        </CardDescription>
       </CardHeader>
       <form action={formAction}>
         <CardContent className="flex flex-col gap-4">
@@ -62,7 +79,10 @@ export function SignupForm() {
           </Button>
           <p className="text-sm text-muted-foreground">
             Đã có tài khoản?{" "}
-            <Link href="/login" className="text-foreground underline">
+            <Link
+              href="/login"
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
               Đăng nhập
             </Link>
           </p>

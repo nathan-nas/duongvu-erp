@@ -1,9 +1,13 @@
+import { AuthShell } from "@/components/auth/auth-shell";
 import { SignupForm } from "@/components/auth/signup-form";
 
 export default function SignupPage() {
   return (
-    <main className="flex flex-1 items-center justify-center px-6 py-16">
+    <AuthShell
+      title="Bắt đầu cùng Dương Vũ"
+      subtitle="Tạo tài khoản để quản lý chi phí xuất khẩu và sản xuất trên cùng một hệ thống."
+    >
       <SignupForm />
-    </main>
+    </AuthShell>
   );
 }

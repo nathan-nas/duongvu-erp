@@ -54,11 +54,18 @@ export function AppSidebar({ email }: Props) {
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex h-14 items-center gap-2 border-b px-5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-xs font-bold">
-            DV
-          </div>
-          <span className="text-sm font-semibold">Dương Vũ</span>
+        <div className="flex h-14 items-center gap-2.5 border-b border-sidebar-border px-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/logo.png"
+            alt=""
+            width={32}
+            height={32}
+            className="size-8 rounded-md bg-white object-contain p-0.5"
+          />
+          <span className="font-display text-sm font-semibold tracking-wide">
+            Dương Vũ
+          </span>
         </div>
 
         <nav className="flex-1 space-y-1 p-3">

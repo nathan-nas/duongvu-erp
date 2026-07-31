@@ -1,9 +1,13 @@
+import { AuthShell } from "@/components/auth/auth-shell";
 import { LoginForm } from "@/components/auth/login-form";
 
 export default function LoginPage() {
   return (
-    <main className="flex flex-1 items-center justify-center px-6 py-16">
+    <AuthShell
+      title="Hạt gạo tinh khiết, vận hành rõ ràng"
+      subtitle="Đăng nhập để tải Excel, phân tích chi phí theo nhà máy và mã chi — cùng nhịp thương hiệu Dương Vũ."
+    >
       <LoginForm />
-    </main>
+    </AuthShell>
   );
 }
