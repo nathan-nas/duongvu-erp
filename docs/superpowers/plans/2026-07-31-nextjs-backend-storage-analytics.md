@@ -22,8 +22,8 @@ File: `supabase/migrations/20260731140000_storage_ingest_analytics.sql`
 
 ### 3. Server actions
 
-- Rewrite `src/app/app/actions/import-spend.ts`
-- Add `src/app/app/actions/analytics.ts` with `fetchSpendLinesPage`
+- Rewrite `src/api/import-spend.ts`
+- Add `src/api/analytics.ts` with `fetchSpendLinesPage`
 - Update tests
 
 ### 4. Wizard UI

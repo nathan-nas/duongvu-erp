@@ -1,6 +1,6 @@
-# src/app/app/actions
+# src/api
 
-Server actions for the authenticated app area.
+Server-side API for the authenticated app (Next.js Server Actions).
 
 ## Files
 
@@ -12,6 +12,7 @@ Server actions for the authenticated app area.
 ## Conventions
 
 - All files use `"use server"` directive.
-- Only export async functions (not constants) from server action files — constants go in `src/lib/spend/constants.ts`.
+- Only export async functions (not constants) from these modules — constants go in `src/lib/spend/constants.ts`.
 - Chunk size: `SPEND_LINE_CHUNK` (400 rows per insert).
 - Co-located tests in `*.test.ts`.
+- Import as `@/api/<module>`.

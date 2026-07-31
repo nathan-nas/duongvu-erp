@@ -8,7 +8,7 @@ import {
   fetchSpendLinesPage,
   type AnalyticsLine,
   type SpendFilterKind,
-} from "@/app/app/actions/analytics";
+} from "@/api/analytics";
 import {
   Card,
   CardContent,
@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { SpendAggregate } from "@/lib/spend/aggregations";
+import { formatImportBatchLabel } from "@/lib/spend/batch-label";
 import { SPEND_LINES_PAGE_SIZE } from "@/lib/spend/constants";
 import { formatVnd } from "@/lib/spend/format";
 import { SpendTreemap } from "./spend-treemap";
@@ -60,12 +61,6 @@ type AnalyticsDashboardProps = {
   monthData: SpendAggregate[];
   plantAll: SpendAggregate[];
   expenseAll: SpendAggregate[];
-};
-
-const batchKindLabel = {
-  annual: "Cả năm",
-  period: "Theo kỳ",
-  unknown: "Không xác định",
 };
 
 type ExpandedCard = "plant" | "expense" | "month" | null;
@@ -107,11 +102,21 @@ export function AnalyticsDashboard({
 
   const batchLabelMap = useMemo(() => {
     const map = new Map<string, string>();
+    const counts = new Map<string, number>();
     for (const b of batches) {
-      map.set(
-        b.id,
-        `${b.source_filename} — ${b.period_year} (${batchKindLabel[b.batch_kind]})`,
-      );
+      const base = formatImportBatchLabel(b);
+      counts.set(base, (counts.get(base) ?? 0) + 1);
+    }
+    const seen = new Map<string, number>();
+    for (const b of batches) {
+      const base = formatImportBatchLabel(b);
+      if ((counts.get(base) ?? 0) <= 1) {
+        map.set(b.id, base);
+        continue;
+      }
+      const n = (seen.get(base) ?? 0) + 1;
+      seen.set(base, n);
+      map.set(b.id, `${base} (${n})`);
     }
     return map;
   }, [batches]);
@@ -355,8 +360,7 @@ export function AnalyticsDashboard({
               <SelectContent>
                 {batches.map((batch) => (
                   <SelectItem key={batch.id} value={batch.id}>
-                    {batch.source_filename} — {batch.period_year} (
-                    {batchKindLabel[batch.batch_kind]})
+                    {batchLabelMap.get(batch.id)}
                   </SelectItem>
                 ))}
               </SelectContent>

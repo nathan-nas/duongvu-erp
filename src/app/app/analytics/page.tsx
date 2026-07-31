@@ -2,7 +2,7 @@ import {
   AnalyticsDashboard,
   type AnalyticsBatch,
 } from "@/components/spend/analytics-dashboard";
-import { fetchSpendAggregates } from "@/app/app/actions/analytics";
+import { fetchSpendAggregates } from "@/api/analytics";
 import { createClient } from "@/lib/supabase/server";
 import type { SpendAggregate } from "@/lib/spend/aggregations";
 

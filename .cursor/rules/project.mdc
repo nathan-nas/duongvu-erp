@@ -13,4 +13,5 @@ alwaysApply: true
 - Prefer surgical diffs; no speculative abstractions or extra features.
 - "HOAI" is an employee name — never use as brand/feature label.
 - Spend feature: components in `src/components/spend/`, logic in `src/lib/spend/`.
+- App API (Server Actions): `src/api/`.
 - Specs live in `docs/superpowers/specs/`; plans in `docs/superpowers/plans/`.

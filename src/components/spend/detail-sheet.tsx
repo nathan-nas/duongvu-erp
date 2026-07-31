@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowUpDown, X } from "lucide-react";
+import { ArrowUpDown, Columns3, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import type { AnalyticsLine } from "@/app/app/actions/analytics";
+import type { AnalyticsLine } from "@/api/analytics";
 import type { SpendAggregate } from "@/lib/spend/aggregations";
 import { formatVnd, formatViDate } from "@/lib/spend/format";
 import { cn } from "@/lib/utils";
@@ -67,6 +67,8 @@ const lineColumns: { key: LineSortKey; label: string; align?: "right" }[] = [
   { key: "expense_code", label: "Mã chi" },
 ];
 
+const DEFAULT_VISIBLE = new Set<LineSortKey>(lineColumns.map((c) => c.key));
+
 function compareLine(a: AnalyticsLine, b: AnalyticsLine, key: LineSortKey): number {
   const av = a[key];
   const bv = b[key];
@@ -112,6 +114,96 @@ function SortButton({
   );
 }
 
+function renderLineCell(line: AnalyticsLine, key: LineSortKey) {
+  switch (key) {
+    case "payment_date":
+      return (
+        <td key={key} className="whitespace-nowrap px-4 py-2.5 text-xs">
+          {formatViDate(line.payment_date)}
+        </td>
+      );
+    case "party_name":
+      return (
+        <td
+          key={key}
+          className="max-w-[180px] truncate px-4 py-2.5 text-xs"
+          title={line.party_name ?? undefined}
+        >
+          <div className="font-medium">{line.party_name ?? "—"}</div>
+          {line.party_code && (
+            <div className="text-[10px] text-muted-foreground">
+              {line.party_code}
+            </div>
+          )}
+        </td>
+      );
+    case "item_name":
+      return (
+        <td
+          key={key}
+          className="max-w-[200px] truncate px-4 py-2.5 text-xs"
+          title={line.item_name ?? undefined}
+        >
+          <div>{line.item_name ?? "—"}</div>
+          {line.uom && (
+            <div className="text-[10px] text-muted-foreground">{line.uom}</div>
+          )}
+        </td>
+      );
+    case "qty":
+      return (
+        <td
+          key={key}
+          className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums"
+        >
+          {line.qty != null ? line.qty.toLocaleString("vi-VN") : "—"}
+        </td>
+      );
+    case "unit_price":
+      return (
+        <td
+          key={key}
+          className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums"
+        >
+          {line.unit_price != null ? formatVnd(line.unit_price) : "—"}
+        </td>
+      );
+    case "amount":
+      return (
+        <td
+          key={key}
+          className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums font-semibold"
+        >
+          {line.amount != null ? formatVnd(line.amount) : "—"}
+        </td>
+      );
+    case "plant_name":
+      return (
+        <td key={key} className="whitespace-nowrap px-4 py-2.5">
+          {line.plant_name ? (
+            <span className="inline-flex rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+              {line.plant_name}
+            </span>
+          ) : (
+            "—"
+          )}
+        </td>
+      );
+    case "expense_code":
+      return (
+        <td key={key} className="whitespace-nowrap px-4 py-2.5">
+          {line.expense_code ? (
+            <span className="inline-flex rounded-md bg-muted px-2 py-0.5 text-[10px] font-medium">
+              {line.expense_code}
+            </span>
+          ) : (
+            "—"
+          )}
+        </td>
+      );
+  }
+}
+
 export function DetailSheet(props: Props) {
   const { title, totalAmount, onClose } = props;
   const isGroups = "groups" in props && props.groups != null;
@@ -119,6 +211,15 @@ export function DetailSheet(props: Props) {
   const [lineSortKey, setLineSortKey] = useState<LineSortKey | null>(null);
   const [groupSortKey, setGroupSortKey] = useState<GroupSortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [visibleKeys, setVisibleKeys] = useState<Set<LineSortKey>>(
+    () => new Set(DEFAULT_VISIBLE),
+  );
+  const [columnPickerOpen, setColumnPickerOpen] = useState(false);
+
+  const visibleColumns = useMemo(
+    () => lineColumns.filter((col) => visibleKeys.has(col.key)),
+    [visibleKeys],
+  );
 
   const sortedLines = useMemo(() => {
     if (isGroups || !props.lines) return [];
@@ -155,6 +256,19 @@ export function DetailSheet(props: Props) {
     }
   }
 
+  function toggleColumn(key: LineSortKey) {
+    setVisibleKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        if (next.size <= 1) return prev;
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }
+
   const lineCountLabel = !isGroups
     ? (props.totalCount ?? props.lines?.length ?? 0)
     : 0;
@@ -174,14 +288,52 @@ export function DetailSheet(props: Props) {
 
   return (
     <Card className="shadow-sm">
-      <CardHeader className="flex flex-row items-start justify-between">
+      <CardHeader className="flex flex-row items-start justify-between gap-2">
         <div>
           <CardTitle className="text-base">{title}</CardTitle>
           <p className="text-sm text-muted-foreground">{subtitle}</p>
         </div>
-        <Button variant="ghost" size="sm" onClick={onClose} aria-label="Đóng">
-          <X className="size-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          {!isGroups && (
+            <div className="relative">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                aria-expanded={columnPickerOpen}
+                aria-label="Chọn cột hiển thị"
+                onClick={() => setColumnPickerOpen((open) => !open)}
+              >
+                <Columns3 className="size-4" />
+              </Button>
+              {columnPickerOpen && (
+                <div className="absolute right-0 z-20 mt-1 w-52 rounded-md border bg-popover p-3 shadow-md">
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">
+                    Cột hiển thị
+                  </p>
+                  <ul className="grid gap-2">
+                    {lineColumns.map((col) => (
+                      <li key={col.key}>
+                        <label className="flex cursor-pointer items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            className="size-3.5 accent-primary"
+                            checked={visibleKeys.has(col.key)}
+                            onChange={() => toggleColumn(col.key)}
+                          />
+                          {col.label}
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+          <Button variant="ghost" size="sm" onClick={onClose} aria-label="Đóng">
+            <X className="size-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="overflow-auto max-h-[600px]">
         {!isGroups && props.loading && (
@@ -234,7 +386,7 @@ export function DetailSheet(props: Props) {
             <table className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 border-b bg-muted/90 backdrop-blur">
                 <tr>
-                  {lineColumns.map((col) => (
+                  {visibleColumns.map((col) => (
                     <SortButton
                       key={col.key}
                       label={col.label}
@@ -248,58 +400,7 @@ export function DetailSheet(props: Props) {
               <tbody className="divide-y">
                 {sortedLines.map((line) => (
                   <tr key={line.id} className="hover:bg-muted/30">
-                    <td className="whitespace-nowrap px-4 py-2.5 text-xs">
-                      {formatViDate(line.payment_date)}
-                    </td>
-                    <td
-                      className="max-w-[180px] truncate px-4 py-2.5 text-xs"
-                      title={line.party_name ?? undefined}
-                    >
-                      <div className="font-medium">{line.party_name ?? "—"}</div>
-                      {line.party_code && (
-                        <div className="text-[10px] text-muted-foreground">
-                          {line.party_code}
-                        </div>
-                      )}
-                    </td>
-                    <td
-                      className="max-w-[200px] truncate px-4 py-2.5 text-xs"
-                      title={line.item_name ?? undefined}
-                    >
-                      <div>{line.item_name ?? "—"}</div>
-                      {line.uom && (
-                        <div className="text-[10px] text-muted-foreground">
-                          {line.uom}
-                        </div>
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums">
-                      {line.qty != null ? line.qty.toLocaleString("vi-VN") : "—"}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums">
-                      {line.unit_price != null ? formatVnd(line.unit_price) : "—"}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums font-semibold">
-                      {line.amount != null ? formatVnd(line.amount) : "—"}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2.5">
-                      {line.plant_name ? (
-                        <span className="inline-flex rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                          {line.plant_name}
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2.5">
-                      {line.expense_code ? (
-                        <span className="inline-flex rounded-md bg-muted px-2 py-0.5 text-[10px] font-medium">
-                          {line.expense_code}
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
+                    {visibleColumns.map((col) => renderLineCell(line, col.key))}
                   </tr>
                 ))}
               </tbody>

@@ -35,7 +35,7 @@ You are a primary contributor to this repository. Humans review; agents implemen
 | Auth components | `src/components/auth/` |
 | UI primitives (shadcn) | `src/components/ui/` |
 | Zustand stores | `src/stores/` |
-| Server actions | `src/app/app/actions/` |
+| App API (Server Actions) | `src/api/` |
 | Supabase migrations | `supabase/migrations/` |
 | Specs & plans | `docs/superpowers/specs/` / `docs/superpowers/plans/` |
 

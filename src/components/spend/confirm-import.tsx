@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   commitImport,
   markImportBatchFailed,
-} from "@/app/app/actions/import-spend";
+} from "@/api/import-spend";
 import { Button } from "@/components/ui/button";
 import {
   Card,

@@ -14,12 +14,12 @@ description: Folder layout, naming, shadcn/zustand usage for duongvu-erp. Use wh
 - Supabase helpers: `src/lib/supabase/`
 - Auth path helpers: `src/lib/auth/`
 - Zustand stores: `src/stores/`
-- Server actions: `src/app/app/actions/`
+- App API (Server Actions): `src/api/`
 
 ## Naming
 
 - Components: PascalCase files for multi-export modules; kebab-case for route segments and most component files (`login-form.tsx`).
-- Server Actions: `src/app/**/actions.ts` or `src/app/**/actions/<name>.ts` with `"use server"`.
+- App API / Server Actions: `src/api/<name>.ts` with `"use server"` (auth page actions may stay under `src/app/auth/`).
 - Shared constants: `src/lib/<area>/constants.ts`.
 
 ## UI and state

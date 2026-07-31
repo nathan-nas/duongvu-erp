@@ -4,7 +4,7 @@ import { useState, type ChangeEvent } from "react";
 import {
   createPendingBatch,
   prepareImport,
-} from "@/app/app/actions/import-spend";
+} from "@/api/import-spend";
 import { ConfirmImport } from "@/components/spend/confirm-import";
 import {
   Card,
