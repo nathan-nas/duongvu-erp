@@ -14,6 +14,10 @@ Pure logic for parsing, classifying, and aggregating spend (expense) data from E
 - Analytics date-range parsing (`date-range.ts`)
 - Format currency (VND) and dates for display (`format.ts`)
 
+## Related APIs
+
+- Import / analytics / CRUD live in `src/api/` — not under `src/app/app/actions/`.
+
 ## Conventions
 
 - No React, no server dependencies — pure TypeScript functions.

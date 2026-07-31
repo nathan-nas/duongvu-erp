@@ -6,13 +6,16 @@ Server-side API for the authenticated app (Next.js Server Actions).
 
 | File | Purpose |
 |------|---------|
-| `import-spend.ts` | `createPendingBatch`, `prepareImport`, `commitImport`, `markImportBatchFailed` — Storage upload pipeline into `import_batch` / `spend_line`. |
-| `analytics.ts` | `fetchSpendDateBounds`, `fetchSpendAggregates`, `fetchSpendLinesPage` — date-range SQL RPC wrappers. |
+| `import-spend.ts` | `createPendingBatch`, `prepareImport`, `commitImport`, `markImportBatchFailed` — Storage upload → `import_batch` / `spend_line`. |
+| `analytics.ts` | `fetchSpendDateBounds`, `fetchSpendAggregates`, `fetchSpendLinesPage`, `fetchSpendLines` — date-range SQL RPC wrappers. Prefer **paged** `fetchSpendLinesPage` for UI. |
+| `data-management.ts` | List batches; preview/delete by date range; delete import batch (+ prune empty). |
+| `spend-lines.ts` | Create / update / delete single spend lines (manual batch support). |
 
 ## Conventions
 
-- All files use `"use server"` directive.
-- Only export async functions (not constants) from these modules — constants go in `src/lib/spend/constants.ts`.
-- Chunk size: `SPEND_LINE_CHUNK` (400 rows per insert).
+- All files use `"use server"`.
+- Only export async functions (not constants) — constants in `src/lib/spend/constants.ts`.
+- Chunk size: `SPEND_LINE_CHUNK` (400 rows per insert / browse page size aligned with UI).
 - Co-located tests in `*.test.ts`.
 - Import as `@/api/<module>`.
+- Large browse queries: rely on optimized `spend_lines_page` RPC (index-friendly paths); never rebuild OR/`to_char` filters that defeat indexes.

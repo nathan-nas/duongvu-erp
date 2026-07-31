@@ -1,22 +1,23 @@
 # src/components/spend
 
-React components for the spend (expense) feature: upload wizard, analytics dashboard, and visualizations.
+React components for spend upload, analytics, and line editing UI.
 
 ## Components
 
 | File | Purpose |
 |------|---------|
-| `upload-wizard.tsx` | File picker; creates pending batch, uploads to Storage, calls prepareImport |
-| `confirm-import.tsx` | Preview server stats, confirm year, commitImport |
-| `analytics-dashboard.tsx` | Kỳ giao dịch date range + KPI cards + charts; drill-down via paginated RPC |
-| `spend-treemap.tsx` | Recharts Treemap (by plant or expense code) |
+| `upload-wizard.tsx` | File picker → pending batch → Storage → `prepareImport` |
+| `confirm-import.tsx` | Preview stats, confirm year, `commitImport` |
+| `analytics-dashboard.tsx` | Kỳ giao dịch date range + KPIs + charts; drill-down with **Tải thêm** |
+| `spend-treemap.tsx` | Recharts Treemap (plant / expense code) |
 | `spend-area-chart.tsx` | Recharts AreaChart (monthly trend) |
-| `spend-bar-chart.tsx` | Recharts BarChart (legacy, may be removed) |
-| `detail-sheet.tsx` | Slide-over panel with paginated contributing line items |
+| `detail-sheet.tsx` | Slide-over contributing lines (Virtuoso when large); optional row CRUD |
+| `spend-line-form-dialog.tsx` | Add/edit spend line |
+| `spend-line-delete-dialog.tsx` | Confirm row delete |
 
 ## Conventions
 
-- Data visualization uses Recharts.
-- Click interactions on charts update a drill-down state that opens `detail-sheet`.
-- All labels in Vietnamese.
-- Logic lives in `src/lib/spend/`; components only handle presentation + interaction.
+- Charts: Recharts; short UI motion only — no decorative chart animation.
+- Drill-down / browse: `fetchSpendLinesPage` + **Tải thêm**, not full-range loads.
+- Labels in Vietnamese.
+- Logic in `src/lib/spend/`; Server Actions in `src/api/`.

@@ -4,7 +4,7 @@ This project expects **Cursor agents** as the main implementers. Humans approve 
 
 ## Before you write code
 
-1. Read [AGENTS.md](AGENTS.md) and the relevant `.cursor/skills/*/SKILL.md`.
+1. Read [AGENTS.md](AGENTS.md) and the relevant `.cursor/skills/*/SKILL.md` (plus nested `AGENTS.md` under the folders you touch).
 2. If the change is non-trivial, produce a short design in `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`.
 3. Break work into a plan in `docs/superpowers/plans/YYYY-MM-DD-<topic>.md` with verifiable steps.
 
@@ -12,8 +12,9 @@ This project expects **Cursor agents** as the main implementers. Humans approve 
 
 - Touch only files required by the plan.
 - Match existing patterns in `src/`.
-- Prefer Server Components and Server Actions for auth and data.
+- Prefer Server Components and Server Actions for auth and data (`src/api/`).
 - Use shadcn components from `src/components/ui/`; add new ones via `pnpm dlx shadcn@latest add <name>`.
+- Keep Dương Vũ branding (`public/brand/`, `font-display`, theme tokens); see skill `brand-ui`.
 - Put ephemeral UI state in Zustand (`src/stores/`). Do **not** mirror the Supabase session into Zustand as authority.
 - Add or update Vitest unit tests for pure helpers and logic.
 
@@ -38,5 +39,6 @@ CI runs the same gates on pull requests. Do not ask to merge with failing CI.
 ## Out of scope unless explicitly requested
 
 - ERP domain modules, orgs/teams, roles, billing
-- Profiles table, Storage, Edge Functions
+- Profiles table, Edge Functions (Storage ingest for spend uploads already exists)
 - Non-Vercel hosting
+- Rebranding away from Dương Vũ navy/blue identity

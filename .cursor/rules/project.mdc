@@ -6,13 +6,13 @@ alwaysApply: true
 # Project rules
 
 - Stack: Next.js App Router, TypeScript, Tailwind, shadcn/ui, Zustand (UI only), Supabase, Recharts, Vercel-only deploy.
-- Brand: "Dương Vũ". All UI text in Vietnamese. Dark mode supported.
+- Brand: "Dương Vũ". Assets in `public/brand/`. Theme: navy + blue (`globals.css`); display font `font-display` (Josefin). Commercial ref: duongvuvn.com. All UI text in Vietnamese. Dark mode supported.
 - Agents follow AGENTS.md: design → plan → implement → `pnpm lint && pnpm typecheck && pnpm test`.
 - No org/business schema until product is defined. Tables: `auth.users`, `import_batch`, `spend_line`.
 - No service-role keys in client or `NEXT_PUBLIC_*` env vars.
 - Prefer surgical diffs; no speculative abstractions or extra features.
 - Prefer shadcn/ui (`src/components/ui/`) over hand-rolled controls; see rule `use-shadcn` and skill `use-shadcn`.
 - "HOAI" is an employee name — never use as brand/feature label.
-- Spend feature: components in `src/components/spend/`, logic in `src/lib/spend/`.
+- Spend: `src/components/spend/`, `src/lib/spend/`. Data management: `src/components/data/`. Auth chrome: `AuthShell` / `AuthBrandPanel`.
 - App API (Server Actions): `src/api/`.
 - Specs live in `docs/superpowers/specs/`; plans in `docs/superpowers/plans/`.

@@ -1,16 +1,20 @@
 # src/components/auth
 
-Authentication form components.
+Authentication UI (branded shell + forms).
 
 ## Components
 
 | File | Purpose |
 |------|---------|
-| `login-form.tsx` | Email + password sign-in form (Vietnamese labels) |
-| `signup-form.tsx` | Email + password sign-up form (Vietnamese labels) |
+| `auth-shell.tsx` | Split layout: brand panel (lg+) + form column |
+| `auth-brand-panel.tsx` | Full-bleed `/brand/hero-rice.png` + title/subtitle |
+| `login-form.tsx` | Email + password sign-in (mobile logo row) |
+| `signup-form.tsx` | Email + password sign-up (mobile logo row) |
 
 ## Conventions
 
+- Pages `/login` and `/signup` wrap forms in `AuthShell` with Vietnamese marketing copy.
 - Forms call server actions in `src/app/auth/actions.ts`.
-- Error messages are translated to Vietnamese via `viError()` in the actions file.
-- Uses shadcn `Input`, `Button`, `Label` components.
+- Errors translated via `viError()` in the actions file.
+- Use shadcn `Input`, `Button`, `Label`, `Card`. Brand wordmarks use `font-display`.
+- Logo: `/brand/logo.png`. See skill `brand-ui`.

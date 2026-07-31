@@ -6,11 +6,13 @@ Shell/layout components for the authenticated app area.
 
 | File | Purpose |
 |------|---------|
-| `app-sidebar.tsx` | Persistent left sidebar: brand "Dương Vũ", nav links with icons, user profile + sign-out. Mobile-responsive (toggle via Zustand `sidebarOpen`). |
-| `app-topbar.tsx` | Slim top bar: mobile hamburger, welcome message, `ThemeToggle`, user avatar. |
+| `app-sidebar.tsx` | Navy branded sidebar: `/brand/logo.png` + "Dương Vũ", nav (Trang chủ, Tải lên, Phân tích, Quản lý dữ liệu), profile + sign-out. Mobile drawer via Zustand `sidebarOpen`. |
+| `app-topbar.tsx` | Slim top bar: mobile hamburger, welcome message, `ThemeToggle`, user avatar initial. |
 
 ## Conventions
 
-- Navigation links highlight active route using `usePathname()`.
-- Dark mode toggle is in the topbar (`src/components/theme-toggle.tsx`).
-- Sidebar state managed in `src/stores/ui-store.ts`.
+- Navigation highlights active route with `usePathname()`.
+- Sidebar uses `bg-sidebar` tokens (navy in light and dark).
+- Brand title uses `font-display`.
+- Dark mode toggle lives in the topbar (`src/components/theme-toggle.tsx`).
+- Sidebar state: `src/stores/ui-store.ts`.

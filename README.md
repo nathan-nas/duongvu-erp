@@ -1,13 +1,13 @@
 # duongvu-erp
 
-Agent-ready Next.js shell on **Vercel** + **Supabase**. Product features are deferred; Cursor agents are the primary contributors (see [AGENTS.md](AGENTS.md)).
+**Dương Vũ** internal spend management on **Vercel** + **Supabase**. Cursor agents are the primary contributors (see [AGENTS.md](AGENTS.md)).
 
 ## Stack
 
 - Next.js (App Router) + TypeScript
-- Tailwind CSS + shadcn/ui
+- Tailwind CSS + shadcn/ui (Josefin Sans display + navy/blue brand tokens)
 - Zustand (client UI state only)
-- Supabase Auth (email + password)
+- Supabase Auth (email + password) + Postgres (`import_batch` / `spend_line`)
 - Deploy: Vercel only
 - CI: GitHub Actions (`lint`, `typecheck`, `test`)
 
@@ -54,9 +54,12 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Route | Access |
 |-------|--------|
-| `/` | Public landing |
-| `/login`, `/signup` | Email + password |
-| `/app` | Signed-in only |
+| `/` | Public landing (brand hero) |
+| `/login`, `/signup` | Email + password (branded auth shell) |
+| `/app` | Signed-in home |
+| `/app/uploads` | Excel spend upload |
+| `/app/analytics` | Charts + Kỳ giao dịch filters |
+| `/app/data` | Bulk delete + line browse/CRUD |
 
 ## Scripts
 
@@ -82,6 +85,8 @@ Do not add other hosts. See `.cursor/skills/vercel-deploy/SKILL.md`.
 - [CONTRIBUTING.md](CONTRIBUTING.md) — contribution guide for agents
 - Specs: `docs/superpowers/specs/`
 - Plans: `docs/superpowers/plans/`
-- Skills: `.cursor/skills/`
+- Project skills: `.cursor/skills/` (`project-conventions`, `brand-ui`, `use-shadcn`, `supabase-auth`, `vercel-deploy`, `add-feature`)
+- Optional polish/SQL skills: `.agents/skills/` (Emil design-eng, Supabase)
+- Brand assets: `public/brand/`
 
 Recommended: install the [Superpowers](https://github.com/obra/superpowers) Cursor plugin for the shared brainstorm/plan/TDD workflow; this repo adds project-specific skills on top.
