@@ -11,6 +11,7 @@ alwaysApply: true
 - No org/business schema until product is defined. Tables: `auth.users`, `import_batch`, `spend_line`.
 - No service-role keys in client or `NEXT_PUBLIC_*` env vars.
 - Prefer surgical diffs; no speculative abstractions or extra features.
+- Prefer shadcn/ui (`src/components/ui/`) over hand-rolled controls; see rule `use-shadcn` and skill `use-shadcn`.
 - "HOAI" is an employee name — never use as brand/feature label.
 - Spend feature: components in `src/components/spend/`, logic in `src/lib/spend/`.
 - App API (Server Actions): `src/api/`.

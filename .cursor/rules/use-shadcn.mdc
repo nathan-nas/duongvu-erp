@@ -1,0 +1,25 @@
+---
+description: Prefer shadcn/ui components over hand-rolled UI controls
+alwaysApply: true
+---
+
+# Use shadcn/ui
+
+When building or changing UI in this repo:
+
+- Prefer components from `src/components/ui/` (shadcn). Do not hand-roll buttons, inputs, selects, dialogs, calendars, popovers, or date pickers when a shadcn primitive exists or can be added.
+- Add missing primitives with `pnpm dlx shadcn@latest add <name>` (respect `components.json`, style `base-nova`).
+- Compose patterns the shadcn way (e.g. Date Picker = `Popover` + `Calendar` via `@/components/ui/date-picker`).
+- Do not use raw `<input type="date">`, custom modal overlays, or one-off CSS control kits for standard controls.
+- Keep Vietnamese labels; match existing Button/Input/Select APIs (`render` prop where Base UI requires it).
+
+```tsx
+// ❌ BAD
+<input type="date" value={iso} onChange={...} />
+
+// ✅ GOOD
+import { DatePicker } from "@/components/ui/date-picker"
+<DatePicker value={iso} onChange={setIso} min={boundsMin} max={boundsMax} />
+```
+
+Follow skill `use-shadcn` for the full checklist.

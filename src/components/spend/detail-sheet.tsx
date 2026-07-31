@@ -2,12 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { ArrowUpDown, Columns3, X } from "lucide-react";
+import { TableVirtuoso } from "react-virtuoso";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { AnalyticsLine } from "@/api/analytics";
 import type { SpendAggregate } from "@/lib/spend/aggregations";
 import { formatVnd, formatViDate } from "@/lib/spend/format";
 import { cn } from "@/lib/utils";
+
+const VIRTUALIZE_MIN_ROWS = 40;
+const VIRTUAL_TABLE_HEIGHT = 560;
 
 type LinesProps = {
   title: string;
@@ -286,8 +290,50 @@ export function DetailSheet(props: Props) {
     typeof props.onNextPage === "function" &&
     totalCount > pageSize;
 
+  const virtualizeGroups =
+    isGroups && sortedGroups.length >= VIRTUALIZE_MIN_ROWS;
+  const virtualizeLines =
+    !isGroups && sortedLines.length >= VIRTUALIZE_MIN_ROWS;
+  const scrollInParent = !virtualizeGroups && !virtualizeLines;
+
+  const groupHeader = (
+    <tr>
+      <SortButton
+        label={props.groupLabel ?? "Nhóm"}
+        active={groupSortKey === "label"}
+        onClick={() => handleGroupSort("label")}
+      />
+      <SortButton
+        label="Số dòng"
+        active={groupSortKey === "count"}
+        onClick={() => handleGroupSort("count")}
+        align="right"
+      />
+      <SortButton
+        label="Tổng chi"
+        active={groupSortKey === "amount"}
+        onClick={() => handleGroupSort("amount")}
+        align="right"
+      />
+    </tr>
+  );
+
+  const lineHeader = (
+    <tr>
+      {visibleColumns.map((col) => (
+        <SortButton
+          key={col.key}
+          label={col.label}
+          active={lineSortKey === col.key}
+          onClick={() => handleLineSort(col.key)}
+          align={col.align}
+        />
+      ))}
+    </tr>
+  );
+
   return (
-    <Card className="shadow-sm">
+    <Card className="motion-enter shadow-sm">
       <CardHeader className="flex flex-row items-start justify-between gap-2">
         <div>
           <CardTitle className="text-base">{title}</CardTitle>
@@ -335,7 +381,9 @@ export function DetailSheet(props: Props) {
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="overflow-auto max-h-[600px]">
+      <CardContent
+        className={cn(scrollInParent && "max-h-[600px] overflow-auto")}
+      >
         {!isGroups && props.loading && (
           <p className="mb-3 text-sm text-muted-foreground" aria-live="polite">
             Đang tải…
@@ -345,66 +393,116 @@ export function DetailSheet(props: Props) {
           <p className="mb-3 text-sm text-destructive">{props.error}</p>
         )}
         {isGroups ? (
-          <table className="w-full text-left text-sm">
-            <thead className="sticky top-0 z-10 border-b bg-muted/90 backdrop-blur">
-              <tr>
-                <SortButton
-                  label={props.groupLabel!}
-                  active={groupSortKey === "label"}
-                  onClick={() => handleGroupSort("label")}
-                />
-                <SortButton
-                  label="Số dòng"
-                  active={groupSortKey === "count"}
-                  onClick={() => handleGroupSort("count")}
-                  align="right"
-                />
-                <SortButton
-                  label="Tổng chi"
-                  active={groupSortKey === "amount"}
-                  onClick={() => handleGroupSort("amount")}
-                  align="right"
-                />
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {sortedGroups.map((group) => (
-                <tr key={group.label} className="hover:bg-muted/30">
-                  <td className="px-4 py-2.5 text-xs font-medium">{group.label}</td>
+          virtualizeGroups ? (
+            <TableVirtuoso
+              style={{ height: VIRTUAL_TABLE_HEIGHT }}
+              data={sortedGroups}
+              className="text-sm"
+              fixedHeaderContent={() => groupHeader}
+              itemContent={(_index, group) => (
+                <>
+                  <td className="px-4 py-2.5 text-xs font-medium">
+                    {group.label}
+                  </td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums">
                     {group.count.toLocaleString("vi-VN")}
                   </td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums font-semibold">
                     {formatVnd(group.amount)}
                   </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <>
+                </>
+              )}
+              components={{
+                Table: ({ style, ...tableProps }) => (
+                  <table
+                    {...tableProps}
+                    className="w-full text-left text-sm"
+                    style={style}
+                  />
+                ),
+                TableHead: (headProps) => (
+                  <thead
+                    {...headProps}
+                    className="border-b bg-muted/90 backdrop-blur"
+                  />
+                ),
+                TableRow: (rowProps) => (
+                  <tr {...rowProps} className="hover:bg-muted/30" />
+                ),
+              }}
+            />
+          ) : (
             <table className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 border-b bg-muted/90 backdrop-blur">
-                <tr>
-                  {visibleColumns.map((col) => (
-                    <SortButton
-                      key={col.key}
-                      label={col.label}
-                      active={lineSortKey === col.key}
-                      onClick={() => handleLineSort(col.key)}
-                      align={col.align}
-                    />
-                  ))}
-                </tr>
+                {groupHeader}
               </thead>
               <tbody className="divide-y">
-                {sortedLines.map((line) => (
-                  <tr key={line.id} className="hover:bg-muted/30">
-                    {visibleColumns.map((col) => renderLineCell(line, col.key))}
+                {sortedGroups.map((group) => (
+                  <tr key={group.label} className="hover:bg-muted/30">
+                    <td className="px-4 py-2.5 text-xs font-medium">
+                      {group.label}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums">
+                      {group.count.toLocaleString("vi-VN")}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums font-semibold">
+                      {formatVnd(group.amount)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          )
+        ) : (
+          <>
+            {virtualizeLines ? (
+              <TableVirtuoso
+                style={{ height: VIRTUAL_TABLE_HEIGHT }}
+                data={sortedLines}
+                className="text-sm"
+                fixedHeaderContent={() => lineHeader}
+                itemContent={(_index, line) => (
+                  <>
+                    {visibleColumns.map((col) =>
+                      renderLineCell(line, col.key),
+                    )}
+                  </>
+                )}
+                components={{
+                  Table: ({ style, ...tableProps }) => (
+                    <table
+                      {...tableProps}
+                      className="w-full text-left text-sm"
+                      style={style}
+                    />
+                  ),
+                  TableHead: (headProps) => (
+                    <thead
+                      {...headProps}
+                      className="border-b bg-muted/90 backdrop-blur"
+                    />
+                  ),
+                  TableRow: (rowProps) => (
+                    <tr {...rowProps} className="hover:bg-muted/30" />
+                  ),
+                }}
+              />
+            ) : (
+              <table className="w-full text-left text-sm">
+                <thead className="sticky top-0 z-10 border-b bg-muted/90 backdrop-blur">
+                  {lineHeader}
+                </thead>
+                <tbody className="divide-y">
+                  {sortedLines.map((line) => (
+                    <tr key={line.id} className="hover:bg-muted/30">
+                      {visibleColumns.map((col) =>
+                        renderLineCell(line, col.key),
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
             {showPaging && (
               <div className="mt-4 flex items-center justify-between gap-2">
                 <p className="text-xs text-muted-foreground">

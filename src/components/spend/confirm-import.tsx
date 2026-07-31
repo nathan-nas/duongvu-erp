@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   commitImport,
   markImportBatchFailed,
@@ -58,11 +59,15 @@ export function ConfirmImport({
     if ("error" in result) {
       await markImportBatchFailed(batchId);
       setError(result.error);
+      toast.error(result.error);
       setSaving(false);
       return;
     }
 
-    router.push(`/app/analytics?batch=${result.batchId}`);
+    toast.success(
+      `Đã nhập ${factRows.toLocaleString("vi-VN")} dòng thành công.`,
+    );
+    router.push("/app/analytics");
   }
 
   return (

@@ -26,7 +26,8 @@ description: Folder layout, naming, shadcn/zustand usage for duongvu-erp. Use wh
 
 - All user-facing text in Vietnamese.
 - Dark mode via `dark` class on `<html>` (toggled by `ThemeToggle` component).
-- Prefer shadcn primitives before custom CSS.
+- Prefer shadcn primitives in `src/components/ui/` before custom controls; add missing ones via `pnpm dlx shadcn@latest add <name>`. See skill `use-shadcn` and rule `use-shadcn`.
+- Date fields: `@/components/ui/date-picker` (not `<input type="date">`).
 - Zustand is for client UI only (sidebar toggle, menus). Session/user always from Supabase server or client helpers.
 - Keep pages thin; put logic in `lib/` or server actions.
 - Data visualization: use Recharts (Treemap, AreaChart, etc.).

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isIsoDate, parseAnalyticsDateRange } from "./date-range";
+import {
+  isIsoDate,
+  isoToLocalDate,
+  localDateToIso,
+  parseAnalyticsDateRange,
+} from "./date-range";
 
 describe("isIsoDate", () => {
   it("accepts valid calendar dates", () => {
@@ -9,6 +14,14 @@ describe("isIsoDate", () => {
   it("rejects invalid dates", () => {
     expect(isIsoDate("2025-13-01")).toBe(false);
     expect(isIsoDate("02/10/2025")).toBe(false);
+  });
+});
+
+describe("isoToLocalDate / localDateToIso", () => {
+  it("round-trips local calendar dates", () => {
+    const date = isoToLocalDate("2025-10-02");
+    expect(date).toBeInstanceOf(Date);
+    expect(localDateToIso(date!)).toBe("2025-10-02");
   });
 });
 

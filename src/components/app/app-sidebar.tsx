@@ -26,15 +26,19 @@ export function AppSidebar({ email }: Props) {
 
   return (
     <>
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      <div
+        aria-hidden={!sidebarOpen}
+        className={cn(
+          "motion-overlay fixed inset-0 z-30 bg-black/40 transition-opacity duration-200 ease-[var(--ease-out)] lg:hidden",
+          sidebarOpen
+            ? "opacity-100"
+            : "pointer-events-none opacity-0",
+        )}
+        onClick={() => setSidebarOpen(false)}
+      />
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r bg-sidebar text-sidebar-foreground transition-transform duration-200 lg:static lg:translate-x-0",
+          "motion-sidebar fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r bg-sidebar text-sidebar-foreground transition-transform duration-200 ease-[var(--ease-out)] lg:static lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >

@@ -53,6 +53,7 @@ You are a primary contributor to this repository. Humans review; agents implemen
 Follow skills in `.cursor/skills/` when relevant:
 
 - `project-conventions` — layout, naming, UI/state rules
+- `use-shadcn` — prefer/install shadcn/ui instead of hand-rolled controls
 - `supabase-auth` — auth, env vars, security boundaries
 - `vercel-deploy` — Vercel-only deploy and env mapping
 - `add-feature` — end-to-end feature checklist for this repo

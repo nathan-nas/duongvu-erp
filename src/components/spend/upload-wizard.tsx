@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, type ChangeEvent } from "react";
+import { FileSpreadsheet } from "lucide-react";
+import { toast } from "sonner";
 import {
   createPendingBatch,
   prepareImport,
@@ -52,6 +54,7 @@ export function UploadWizard() {
 
       if ("error" in pending) {
         setError(pending.error);
+        toast.error(pending.error);
         return;
       }
 
@@ -64,13 +67,16 @@ export function UploadWizard() {
         });
 
       if (uploadError) {
-        setError("Không tải được file lên máy chủ.");
+        const message = "Không tải được file lên máy chủ.";
+        setError(message);
+        toast.error(message);
         return;
       }
 
       const preview = await prepareImport(pending.batchId);
       if ("error" in preview) {
         setError(preview.error);
+        toast.error(preview.error);
         return;
       }
 
@@ -83,8 +89,11 @@ export function UploadWizard() {
         periodYear:
           preview.suggestedPeriodYear ?? preview.periodYear ?? suggestedYear,
       });
+      toast.success("Đã đọc file. Kiểm tra và xác nhận nhập.");
     } catch {
-      setError("Không thể xử lý file Excel. Vui lòng chọn lại file.");
+      const message = "Không thể xử lý file Excel. Vui lòng chọn lại file.";
+      setError(message);
+      toast.error(message);
     } finally {
       setIsWorking(false);
       event.target.value = "";
@@ -104,16 +113,19 @@ export function UploadWizard() {
   }
 
   return (
-    <Card>
+    <Card className="motion-enter">
       <CardHeader>
         <CardTitle>Chọn file Excel</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-4">
         <label
           htmlFor="spend-file"
-          className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 px-6 py-10 text-center transition-colors hover:border-primary/50 hover:bg-muted/50"
+          className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 px-6 py-10 text-center transition-[transform,border-color,background-color] duration-[160ms] ease-[var(--ease-out)] hover:border-primary/50 hover:bg-muted/50 active:scale-[0.99]"
         >
-          <span className="text-3xl">📂</span>
+          <FileSpreadsheet
+            className="size-10 text-muted-foreground empty-float"
+            aria-hidden
+          />
           <span className="text-sm font-medium">
             Kéo thả hoặc nhấn để chọn file
           </span>

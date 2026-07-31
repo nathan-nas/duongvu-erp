@@ -12,6 +12,21 @@ export function isIsoDate(value: string): boolean {
   );
 }
 
+/** Parse YYYY-MM-DD as a local calendar Date (no UTC shift). */
+export function isoToLocalDate(iso: string): Date | undefined {
+  if (!isIsoDate(iso)) return undefined;
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/** Format a local Date as YYYY-MM-DD. */
+export function localDateToIso(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 export function parseAnalyticsDateRange(
   fromRaw: string | undefined,
   toRaw: string | undefined,

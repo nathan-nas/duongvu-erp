@@ -3,7 +3,8 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Maximize2, Minimize2 } from "lucide-react";
+import NumberFlow from "@number-flow/react";
+import { BarChart3, Maximize2, Minimize2 } from "lucide-react";
 import {
   fetchSpendLinesPage,
   type AnalyticsLine,
@@ -16,12 +17,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import type { SpendAggregate } from "@/lib/spend/aggregations";
 import { SPEND_LINES_PAGE_SIZE } from "@/lib/spend/constants";
 import { isIsoDate } from "@/lib/spend/date-range";
-import { formatVnd } from "@/lib/spend/format";
 import { SpendTreemap } from "./spend-treemap";
 import { SpendAreaChart } from "./spend-area-chart";
 import { DetailSheet } from "./detail-sheet";
@@ -227,11 +227,15 @@ export function AnalyticsDashboard({
 
   if (!boundsMin || !boundsMax) {
     return (
-      <Card>
+      <Card className="motion-enter">
         <CardHeader>
           <CardTitle>Chưa có dữ liệu</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-start gap-4">
+          <BarChart3
+            className="size-10 text-muted-foreground empty-float"
+            aria-hidden
+          />
           <p>Chưa có dữ liệu. Hãy tải lên file Excel.</p>
           <Button render={<Link href="/app/uploads" />}>Tải lên file</Button>
         </CardContent>
@@ -245,7 +249,17 @@ export function AnalyticsDashboard({
   const kpis = [
     {
       label: "Tổng chi",
-      value: formatVnd(amountSum),
+      value: (
+        <NumberFlow
+          value={amountSum}
+          locales="vi-VN"
+          format={{
+            style: "currency",
+            currency: "VND",
+            maximumFractionDigits: 0,
+          }}
+        />
+      ),
       onClick: () => {
         if (!hasRange) return;
         openLinesDrill({
@@ -259,7 +273,7 @@ export function AnalyticsDashboard({
     },
     {
       label: "Số nhà máy",
-      value: String(plantCount),
+      value: <NumberFlow value={plantCount} locales="vi-VN" />,
       onClick: () => {
         if (!hasRange) return;
         setDrill({
@@ -274,7 +288,7 @@ export function AnalyticsDashboard({
     },
     {
       label: "Số mã chi",
-      value: String(expenseCodeCount),
+      value: <NumberFlow value={expenseCodeCount} locales="vi-VN" />,
       onClick: () => {
         if (!hasRange) return;
         setDrill({
@@ -340,24 +354,22 @@ export function AnalyticsDashboard({
           <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
             <div className="grid gap-2">
               <Label htmlFor="analytics-from">Từ ngày</Label>
-              <Input
+              <DatePicker
                 id="analytics-from"
-                type="date"
                 value={fromInput}
                 min={boundsMin}
                 max={boundsMax}
-                onChange={(event) => setFromInput(event.target.value)}
+                onChange={setFromInput}
               />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="analytics-to">Đến ngày</Label>
-              <Input
+              <DatePicker
                 id="analytics-to"
-                type="date"
                 value={toInput}
                 min={boundsMin}
                 max={boundsMax}
-                onChange={(event) => setToInput(event.target.value)}
+                onChange={setToInput}
               />
             </div>
             <Button type="button" onClick={applyRange}>
@@ -379,7 +391,7 @@ export function AnalyticsDashboard({
             {kpis.map((kpi) => (
               <Card
                 key={kpi.label}
-                className="cursor-pointer shadow-sm hover:ring-2 hover:ring-primary/30"
+                className="pressable-card cursor-pointer shadow-sm"
                 onClick={kpi.onClick}
               >
                 <CardHeader className="pb-2">
@@ -388,7 +400,7 @@ export function AnalyticsDashboard({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold">{kpi.value}</p>
+                  <p className="text-2xl font-bold tabular-nums">{kpi.value}</p>
                 </CardContent>
               </Card>
             ))}
@@ -401,7 +413,7 @@ export function AnalyticsDashboard({
           >
             {showPlant && (
               <Card
-                className="cursor-pointer shadow-sm hover:ring-2 hover:ring-primary/30"
+                className="pressable-card cursor-pointer shadow-sm"
                 onClick={() => openAllLines("plant", "Chi theo nhà máy")}
               >
                 <CardHeader className="flex flex-row items-start justify-between">
@@ -439,7 +451,7 @@ export function AnalyticsDashboard({
             )}
             {showExpense && (
               <Card
-                className="cursor-pointer shadow-sm hover:ring-2 hover:ring-primary/30"
+                className="pressable-card cursor-pointer shadow-sm"
                 onClick={() => openAllLines("expense", "Chi theo mã chi phí")}
               >
                 <CardHeader className="flex flex-row items-start justify-between">
@@ -484,7 +496,7 @@ export function AnalyticsDashboard({
 
           {showMonth && (
             <Card
-              className="cursor-pointer shadow-sm hover:ring-2 hover:ring-primary/30"
+              className="pressable-card cursor-pointer shadow-sm"
               onClick={() =>
                 openAllLines("month", "Xu hướng chi theo tháng")
               }
