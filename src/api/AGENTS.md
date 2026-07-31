@@ -7,7 +7,7 @@ Server-side API for the authenticated app (Next.js Server Actions).
 | File | Purpose |
 |------|---------|
 | `import-spend.ts` | `createPendingBatch`, `prepareImport`, `commitImport`, `markImportBatchFailed` — Storage upload pipeline into `import_batch` / `spend_line`. |
-| `analytics.ts` | `fetchSpendAggregates`, `fetchSpendLinesPage` — SQL RPC wrappers for charts and paginated drill-down. |
+| `analytics.ts` | `fetchSpendDateBounds`, `fetchSpendAggregates`, `fetchSpendLinesPage` — date-range SQL RPC wrappers. |
 
 ## Conventions
 

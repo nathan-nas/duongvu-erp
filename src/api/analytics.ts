@@ -25,6 +25,16 @@ export type AnalyticsLine = {
   note: string | null;
 };
 
+export type SpendDateBounds = {
+  min: string | null;
+  max: string | null;
+};
+
+export type SpendRangeTotals = {
+  amountSum: number;
+  factRows: number;
+};
+
 function stringOrNull(value: unknown): string | null {
   return typeof value === "string" ? value : null;
 }
@@ -33,6 +43,12 @@ function numberOrNull(value: unknown): number | null {
   if (value == null || value === "") return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
+}
+
+function isoDateOrNull(value: unknown): string | null {
+  if (value == null) return null;
+  if (typeof value === "string" && value !== "") return value.slice(0, 10);
+  return null;
 }
 
 function mapAggregateRows(
@@ -45,12 +61,31 @@ function mapAggregateRows(
   }));
 }
 
-export async function fetchSpendAggregates(batchId: string): Promise<{
+export async function fetchSpendDateBounds(): Promise<SpendDateBounds> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { min: null, max: null };
+
+  const { data } = await supabase.rpc("spend_date_bounds");
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    min: isoDateOrNull(row?.min_payment_date),
+    max: isoDateOrNull(row?.max_payment_date),
+  };
+}
+
+export async function fetchSpendAggregates(input: {
+  from: string;
+  to: string;
+}): Promise<{
   plant: SpendAggregate[];
   expense: SpendAggregate[];
   month: SpendAggregate[];
   plantAll: SpendAggregate[];
   expenseAll: SpendAggregate[];
+  totals: SpendRangeTotals;
 } | null> {
   const supabase = await createClient();
   const {
@@ -58,23 +93,19 @@ export async function fetchSpendAggregates(batchId: string): Promise<{
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: batch } = await supabase
-    .from("import_batch")
-    .select("id")
-    .eq("id", batchId)
-    .eq("user_id", user.id)
-    .eq("status", "ready")
-    .maybeSingle();
+  const params = { p_from: input.from, p_to: input.to };
 
-  if (!batch) return null;
+  const [plantTop, expenseTop, month, plantAll, expenseAll, totals] =
+    await Promise.all([
+      supabase.rpc("spend_agg_by_plant", { ...params, p_top: 15 }),
+      supabase.rpc("spend_agg_by_expense", { ...params, p_top: 15 }),
+      supabase.rpc("spend_agg_by_month", params),
+      supabase.rpc("spend_agg_by_plant", { ...params, p_top: null }),
+      supabase.rpc("spend_agg_by_expense", { ...params, p_top: null }),
+      supabase.rpc("spend_range_totals", params),
+    ]);
 
-  const [plantTop, expenseTop, month, plantAll, expenseAll] = await Promise.all([
-    supabase.rpc("spend_agg_by_plant", { p_batch_id: batchId, p_top: 15 }),
-    supabase.rpc("spend_agg_by_expense", { p_batch_id: batchId, p_top: 15 }),
-    supabase.rpc("spend_agg_by_month", { p_batch_id: batchId }),
-    supabase.rpc("spend_agg_by_plant", { p_batch_id: batchId, p_top: null }),
-    supabase.rpc("spend_agg_by_expense", { p_batch_id: batchId, p_top: null }),
-  ]);
+  const totalsRow = Array.isArray(totals.data) ? totals.data[0] : totals.data;
 
   return {
     plant: mapAggregateRows(plantTop.data),
@@ -82,16 +113,23 @@ export async function fetchSpendAggregates(batchId: string): Promise<{
     month: mapAggregateRows(month.data),
     plantAll: mapAggregateRows(plantAll.data),
     expenseAll: mapAggregateRows(expenseAll.data),
+    totals: {
+      amountSum: Number(totalsRow?.amount_sum) || 0,
+      factRows: Number(totalsRow?.fact_rows) || 0,
+    },
   };
 }
 
 export async function fetchSpendLinesPage(input: {
-  batchId: string;
+  from: string;
+  to: string;
   filterKind: SpendFilterKind;
   filterValue: string;
   offset?: number;
   limit?: number;
-}): Promise<{ lines: AnalyticsLine[]; totalCount: number; totalAmount: number } | { error: string }> {
+}): Promise<
+  { lines: AnalyticsLine[]; totalCount: number; totalAmount: number } | { error: string }
+> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -104,7 +142,8 @@ export async function fetchSpendLinesPage(input: {
   const offset = input.offset ?? 0;
 
   const { data, error } = await supabase.rpc("spend_lines_page", {
-    p_batch_id: input.batchId,
+    p_from: input.from,
+    p_to: input.to,
     p_filter_kind: input.filterKind,
     p_filter_value: input.filterValue,
     p_limit: limit,
@@ -121,7 +160,7 @@ export async function fetchSpendLinesPage(input: {
 
   const lines: AnalyticsLine[] = rows.map((line: Record<string, unknown>) => ({
     id: String(line.id),
-    payment_date: stringOrNull(line.payment_date),
+    payment_date: stringOrNull(line.payment_date)?.slice(0, 10) ?? null,
     party_code: stringOrNull(line.party_code),
     party_name: stringOrNull(line.party_name),
     item_code: stringOrNull(line.item_code),

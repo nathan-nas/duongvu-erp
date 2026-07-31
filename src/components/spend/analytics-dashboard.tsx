@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Maximize2, Minimize2 } from "lucide-react";
@@ -16,16 +16,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import type { SpendAggregate } from "@/lib/spend/aggregations";
-import { formatImportBatchLabel } from "@/lib/spend/batch-label";
 import { SPEND_LINES_PAGE_SIZE } from "@/lib/spend/constants";
+import { isIsoDate } from "@/lib/spend/date-range";
 import { formatVnd } from "@/lib/spend/format";
 import { SpendTreemap } from "./spend-treemap";
 import { SpendAreaChart } from "./spend-area-chart";
@@ -42,22 +37,15 @@ function scrollToDetail() {
   }, 50);
 }
 
-export type AnalyticsBatch = {
-  id: string;
-  source_filename: string;
-  period_year: number;
-  batch_kind: "annual" | "period" | "unknown";
-  fact_rows: number;
-  amount_sum: number;
-  payment_date_min: string | null;
-  payment_date_max: string | null;
-};
-
 export type { AnalyticsLine };
 
 type AnalyticsDashboardProps = {
-  batches: AnalyticsBatch[];
-  selectedBatchId: string | null;
+  from: string | null;
+  to: string | null;
+  boundsMin: string | null;
+  boundsMax: string | null;
+  rangeError: string | null;
+  amountSum: number;
   plantData: SpendAggregate[];
   expenseData: SpendAggregate[];
   monthData: SpendAggregate[];
@@ -84,8 +72,12 @@ type DrillState =
     };
 
 export function AnalyticsDashboard({
-  batches,
-  selectedBatchId,
+  from,
+  to,
+  boundsMin,
+  boundsMax,
+  rangeError,
+  amountSum,
   plantData,
   expenseData,
   monthData,
@@ -93,6 +85,9 @@ export function AnalyticsDashboard({
   expenseAll,
 }: AnalyticsDashboardProps) {
   const router = useRouter();
+  const [fromInput, setFromInput] = useState(from ?? boundsMin ?? "");
+  const [toInput, setToInput] = useState(to ?? boundsMax ?? "");
+  const [formError, setFormError] = useState<string | null>(null);
   const [drill, setDrill] = useState<DrillState | null>(null);
   const [expanded, setExpanded] = useState<ExpandedCard>(null);
   const [pageLines, setPageLines] = useState<AnalyticsLine[]>([]);
@@ -102,34 +97,16 @@ export function AnalyticsDashboard({
   const [pageLoading, setPageLoading] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
 
-  const batchLabelMap = useMemo(() => {
-    const map = new Map<string, string>();
-    const counts = new Map<string, number>();
-    for (const b of batches) {
-      const base = formatImportBatchLabel(b);
-      counts.set(base, (counts.get(base) ?? 0) + 1);
-    }
-    const seen = new Map<string, number>();
-    for (const b of batches) {
-      const base = formatImportBatchLabel(b);
-      if ((counts.get(base) ?? 0) <= 1) {
-        map.set(b.id, base);
-        continue;
-      }
-      const n = (seen.get(base) ?? 0) + 1;
-      seen.set(base, n);
-      map.set(b.id, `${base} (${n})`);
-    }
-    return map;
-  }, [batches]);
+  const hasRange = Boolean(from && to && !rangeError);
 
   const loadLinesPage = useCallback(
     async (field: SpendFilterKind, value: string, offset: number) => {
-      if (!selectedBatchId) return;
+      if (!from || !to) return;
       setPageLoading(true);
       setPageError(null);
       const result = await fetchSpendLinesPage({
-        batchId: selectedBatchId,
+        from,
+        to,
         filterKind: field,
         filterValue: value,
         offset,
@@ -148,7 +125,7 @@ export function AnalyticsDashboard({
       setPageTotalAmount(result.totalAmount);
       setPageOffset(offset);
     },
-    [selectedBatchId],
+    [from, to],
   );
 
   const openLinesDrill = useCallback(
@@ -234,7 +211,21 @@ export function AnalyticsDashboard({
     openAllLines(card, title);
   }
 
-  if (batches.length === 0 || !selectedBatchId) {
+  function applyRange() {
+    setFormError(null);
+    if (!isIsoDate(fromInput) || !isIsoDate(toInput)) {
+      setFormError("Vui lòng chọn đủ ngày bắt đầu và kết thúc.");
+      return;
+    }
+    if (fromInput > toInput) {
+      setFormError("Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.");
+      return;
+    }
+    handleClose();
+    router.push(`/app/analytics?from=${fromInput}&to=${toInput}`);
+  }
+
+  if (!boundsMin || !boundsMax) {
     return (
       <Card>
         <CardHeader>
@@ -248,16 +239,15 @@ export function AnalyticsDashboard({
     );
   }
 
-  const selectedBatch = batches.find((b) => b.id === selectedBatchId)!;
-  const totalAmount = selectedBatch.amount_sum;
   const plantCount = plantAll.length;
   const expenseCodeCount = expenseAll.length;
 
   const kpis = [
     {
       label: "Tổng chi",
-      value: formatVnd(totalAmount),
+      value: formatVnd(amountSum),
       onClick: () => {
+        if (!hasRange) return;
         openLinesDrill({
           kind: "lines",
           title: "Tất cả dòng chi",
@@ -271,6 +261,7 @@ export function AnalyticsDashboard({
       label: "Số nhà máy",
       value: String(plantCount),
       onClick: () => {
+        if (!hasRange) return;
         setDrill({
           kind: "groups",
           title: "Tổng hợp theo nhà máy",
@@ -285,6 +276,7 @@ export function AnalyticsDashboard({
       label: "Số mã chi",
       value: String(expenseCodeCount),
       onClick: () => {
+        if (!hasRange) return;
         setDrill({
           kind: "groups",
           title: "Tổng hợp theo mã chi",
@@ -343,176 +335,197 @@ export function AnalyticsDashboard({
   return (
     <div className="flex flex-col gap-6">
       <Card className="shadow-sm">
-        <CardContent className="pt-4">
-          <div className="grid max-w-xl gap-2 text-sm font-medium">
-            <span>Lô dữ liệu</span>
-            <Select
-              value={selectedBatchId}
-              onValueChange={(val) =>
-                router.push(`/app/analytics?batch=${val}`)
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Chọn lô dữ liệu">
-                  {selectedBatchId
-                    ? batchLabelMap.get(selectedBatchId)
-                    : null}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {batches.map((batch) => (
-                  <SelectItem key={batch.id} value={batch.id}>
-                    {batchLabelMap.get(batch.id)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <CardContent className="grid gap-4 pt-4">
+          <p className="text-sm font-medium">Kỳ giao dịch</p>
+          <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+            <div className="grid gap-2">
+              <Label htmlFor="analytics-from">Từ ngày</Label>
+              <Input
+                id="analytics-from"
+                type="date"
+                value={fromInput}
+                min={boundsMin}
+                max={boundsMax}
+                onChange={(event) => setFromInput(event.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="analytics-to">Đến ngày</Label>
+              <Input
+                id="analytics-to"
+                type="date"
+                value={toInput}
+                min={boundsMin}
+                max={boundsMax}
+                onChange={(event) => setToInput(event.target.value)}
+              />
+            </div>
+            <Button type="button" onClick={applyRange}>
+              Áp dụng
+            </Button>
           </div>
+          {(formError || rangeError) && (
+            <p className="text-sm text-destructive">{formError ?? rangeError}</p>
+          )}
         </CardContent>
       </Card>
 
-      <section
-        className="grid gap-4 sm:grid-cols-3"
-        aria-label="Chỉ số tổng quan"
-      >
-        {kpis.map((kpi) => (
-          <Card
-            key={kpi.label}
-            className="cursor-pointer shadow-sm hover:ring-2 hover:ring-primary/30"
-            onClick={kpi.onClick}
+      {!hasRange ? null : (
+        <>
+          <section
+            className="grid gap-4 sm:grid-cols-3"
+            aria-label="Chỉ số tổng quan"
           >
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground">
-                {kpi.label}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{kpi.value}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </section>
-
-      {renderDetail("kpi")}
-
-      <section
-        className={cn("grid gap-6", expanded === null && "lg:grid-cols-2")}
-      >
-        {showPlant && (
-          <Card
-            className="cursor-pointer shadow-sm hover:ring-2 hover:ring-primary/30"
-            onClick={() => openAllLines("plant", "Chi theo nhà máy")}
-          >
-            <CardHeader className="flex flex-row items-start justify-between">
-              <div>
-                <CardTitle className="text-base">
-                  Chi theo nhà máy (NM)
-                </CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  Nhấn biểu đồ để lọc chi tiết
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleExpand("plant", "Chi theo nhà máy");
-                }}
-                aria-label={expanded === "plant" ? "Thu nhỏ" : "Phóng to"}
+            {kpis.map((kpi) => (
+              <Card
+                key={kpi.label}
+                className="cursor-pointer shadow-sm hover:ring-2 hover:ring-primary/30"
+                onClick={kpi.onClick}
               >
-                {expanded === "plant" ? (
-                  <Minimize2 className="size-4" />
-                ) : (
-                  <Maximize2 className="size-4" />
-                )}
-              </Button>
-            </CardHeader>
-            <CardContent onClick={(e) => e.stopPropagation()}>
-              <SpendTreemap data={plantData} onClickBlock={handlePlantClick} />
-            </CardContent>
-          </Card>
-        )}
-        {showExpense && (
-          <Card
-            className="cursor-pointer shadow-sm hover:ring-2 hover:ring-primary/30"
-            onClick={() => openAllLines("expense", "Chi theo mã chi phí")}
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs font-medium text-muted-foreground">
+                    {kpi.label}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold">{kpi.value}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </section>
+
+          {renderDetail("kpi")}
+
+          <section
+            className={cn("grid gap-6", expanded === null && "lg:grid-cols-2")}
           >
-            <CardHeader className="flex flex-row items-start justify-between">
-              <div>
-                <CardTitle className="text-base">
-                  Chi theo mã chi phí (MÃ)
-                </CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  Nhấn biểu đồ để lọc chi tiết
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleExpand("expense", "Chi theo mã chi phí");
-                }}
-                aria-label={expanded === "expense" ? "Thu nhỏ" : "Phóng to"}
+            {showPlant && (
+              <Card
+                className="cursor-pointer shadow-sm hover:ring-2 hover:ring-primary/30"
+                onClick={() => openAllLines("plant", "Chi theo nhà máy")}
               >
-                {expanded === "expense" ? (
-                  <Minimize2 className="size-4" />
-                ) : (
-                  <Maximize2 className="size-4" />
-                )}
-              </Button>
-            </CardHeader>
-            <CardContent onClick={(e) => e.stopPropagation()}>
-              <SpendTreemap
-                data={expenseData}
-                onClickBlock={handleExpenseClick}
-              />
-            </CardContent>
-          </Card>
-        )}
-      </section>
+                <CardHeader className="flex flex-row items-start justify-between">
+                  <div>
+                    <CardTitle className="text-base">
+                      Chi theo nhà máy (NM)
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground">
+                      Nhấn biểu đồ để lọc chi tiết
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleExpand("plant", "Chi theo nhà máy");
+                    }}
+                    aria-label={expanded === "plant" ? "Thu nhỏ" : "Phóng to"}
+                  >
+                    {expanded === "plant" ? (
+                      <Minimize2 className="size-4" />
+                    ) : (
+                      <Maximize2 className="size-4" />
+                    )}
+                  </Button>
+                </CardHeader>
+                <CardContent onClick={(e) => e.stopPropagation()}>
+                  <SpendTreemap
+                    data={plantData}
+                    onClickBlock={handlePlantClick}
+                  />
+                </CardContent>
+              </Card>
+            )}
+            {showExpense && (
+              <Card
+                className="cursor-pointer shadow-sm hover:ring-2 hover:ring-primary/30"
+                onClick={() => openAllLines("expense", "Chi theo mã chi phí")}
+              >
+                <CardHeader className="flex flex-row items-start justify-between">
+                  <div>
+                    <CardTitle className="text-base">
+                      Chi theo mã chi phí (MÃ)
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground">
+                      Nhấn biểu đồ để lọc chi tiết
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleExpand("expense", "Chi theo mã chi phí");
+                    }}
+                    aria-label={
+                      expanded === "expense" ? "Thu nhỏ" : "Phóng to"
+                    }
+                  >
+                    {expanded === "expense" ? (
+                      <Minimize2 className="size-4" />
+                    ) : (
+                      <Maximize2 className="size-4" />
+                    )}
+                  </Button>
+                </CardHeader>
+                <CardContent onClick={(e) => e.stopPropagation()}>
+                  <SpendTreemap
+                    data={expenseData}
+                    onClickBlock={handleExpenseClick}
+                  />
+                </CardContent>
+              </Card>
+            )}
+          </section>
 
-      {renderDetail("plant")}
-      {renderDetail("expense")}
+          {renderDetail("plant")}
+          {renderDetail("expense")}
 
-      {showMonth && (
-        <Card
-          className="cursor-pointer shadow-sm hover:ring-2 hover:ring-primary/30"
-          onClick={() => openAllLines("month", "Xu hướng chi theo tháng")}
-        >
-          <CardHeader className="flex flex-row items-start justify-between">
-            <div>
-              <CardTitle className="text-base">
-                Xu hướng chi theo tháng
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">
-                Nhấn điểm để lọc chi tiết tháng
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleExpand("month", "Xu hướng chi theo tháng");
-              }}
-              aria-label={expanded === "month" ? "Thu nhỏ" : "Phóng to"}
+          {showMonth && (
+            <Card
+              className="cursor-pointer shadow-sm hover:ring-2 hover:ring-primary/30"
+              onClick={() =>
+                openAllLines("month", "Xu hướng chi theo tháng")
+              }
             >
-              {expanded === "month" ? (
-                <Minimize2 className="size-4" />
-              ) : (
-                <Maximize2 className="size-4" />
-              )}
-            </Button>
-          </CardHeader>
-          <CardContent onClick={(e) => e.stopPropagation()}>
-            <SpendAreaChart data={monthData} onClickPoint={handleMonthClick} />
-          </CardContent>
-        </Card>
-      )}
+              <CardHeader className="flex flex-row items-start justify-between">
+                <div>
+                  <CardTitle className="text-base">
+                    Xu hướng chi theo tháng
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    Nhấn điểm để lọc chi tiết tháng
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleExpand("month", "Xu hướng chi theo tháng");
+                  }}
+                  aria-label={expanded === "month" ? "Thu nhỏ" : "Phóng to"}
+                >
+                  {expanded === "month" ? (
+                    <Minimize2 className="size-4" />
+                  ) : (
+                    <Maximize2 className="size-4" />
+                  )}
+                </Button>
+              </CardHeader>
+              <CardContent onClick={(e) => e.stopPropagation()}>
+                <SpendAreaChart
+                  data={monthData}
+                  onClickPoint={handleMonthClick}
+                />
+              </CardContent>
+            </Card>
+          )}
 
-      {renderDetail("month")}
+          {renderDetail("month")}
+        </>
+      )}
     </div>
   );
 }

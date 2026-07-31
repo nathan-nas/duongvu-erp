@@ -11,8 +11,8 @@ Pure logic for parsing, classifying, and aggregating spend (expense) data from E
 - Map raw spreadsheet rows to typed objects (`map-fact-row.ts`)
 - Aggregate helpers for tests / shape parity (`aggregations.ts`); production charts use SQL RPCs
 - Storage path helpers (`storage-paths.ts`) and import serialization (`import-pipeline.ts`)
+- Analytics date-range parsing (`date-range.ts`)
 - Format currency (VND) and dates for display (`format.ts`)
-- Batch selector labels from spend_line.payment_date / ngày (`batch-label.ts`)
 
 ## Conventions
 

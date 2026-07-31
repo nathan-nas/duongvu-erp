@@ -8,7 +8,7 @@ React components for the spend (expense) feature: upload wizard, analytics dashb
 |------|---------|
 | `upload-wizard.tsx` | File picker; creates pending batch, uploads to Storage, calls prepareImport |
 | `confirm-import.tsx` | Preview server stats, confirm year, commitImport |
-| `analytics-dashboard.tsx` | KPI cards + expandable chart cards; drill-down via paginated RPC |
+| `analytics-dashboard.tsx` | Kỳ giao dịch date range + KPI cards + charts; drill-down via paginated RPC |
 | `spend-treemap.tsx` | Recharts Treemap (by plant or expense code) |
 | `spend-area-chart.tsx` | Recharts AreaChart (monthly trend) |
 | `spend-bar-chart.tsx` | Recharts BarChart (legacy, may be removed) |
