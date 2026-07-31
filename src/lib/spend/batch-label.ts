@@ -1,32 +1,48 @@
+import { formatViDate } from "./format";
 import type { BatchKind } from "./types";
 
 export type BatchLabelInput = {
-  source_filename: string;
-  period_year: number;
   batch_kind: BatchKind;
+  period_year: number;
+  /** ISO `YYYY-MM-DD` from spend_line.payment_date */
+  payment_date_min: string | null;
+  payment_date_max: string | null;
 };
 
-/** Extract period month (1–12) from filenames like `VAT TU T12-2025 (HOAI).xlsx`. */
-export function extractPeriodMonthFromFilename(filename: string): number | null {
-  const match = filename.match(/T(\d{1,2})-20\d{2}/i);
-  if (!match) return null;
-  const month = Number(match[1]);
-  return month >= 1 && month <= 12 ? month : null;
+function yearFromIso(iso: string | null): number | null {
+  if (!iso) return null;
+  const match = iso.match(/^(\d{4})-/);
+  return match ? Number(match[1]) : null;
 }
 
-/** Human label for the batch selector — period as month/year, annual as year summary. */
+/**
+ * Batch selector label from ngày (payment_date), not the Excel filename.
+ * - annual → year summary
+ * - otherwise → DD/MM/YYYY or DD/MM/YYYY – DD/MM/YYYY
+ */
 export function formatImportBatchLabel(batch: BatchLabelInput): string {
+  const min = batch.payment_date_min;
+  const max = batch.payment_date_max;
+
   if (batch.batch_kind === "annual") {
-    return `Tổng hợp năm ${batch.period_year}`;
+    const year =
+      yearFromIso(max) ?? yearFromIso(min) ?? batch.period_year;
+    return `Tổng hợp năm ${year}`;
   }
 
-  if (batch.batch_kind === "period") {
-    const month = extractPeriodMonthFromFilename(batch.source_filename);
-    if (month != null) {
-      return `Tháng ${month}/${batch.period_year}`;
+  if (min && max) {
+    const start = formatViDate(min);
+    const end = formatViDate(max);
+    if (start === "—" && end === "—") {
+      return `Năm ${batch.period_year}`;
     }
-    return `Theo kỳ ${batch.period_year}`;
+    if (start === end || !max || min === max) {
+      return start;
+    }
+    return `${start} – ${end}`;
   }
 
+  if (min) return formatViDate(min);
+  if (max) return formatViDate(max);
   return `Năm ${batch.period_year}`;
 }

@@ -49,6 +49,8 @@ export type AnalyticsBatch = {
   batch_kind: "annual" | "period" | "unknown";
   fact_rows: number;
   amount_sum: number;
+  payment_date_min: string | null;
+  payment_date_max: string | null;
 };
 
 export type { AnalyticsLine };

@@ -1,51 +1,47 @@
 import { describe, expect, it } from "vitest";
-import {
-  extractPeriodMonthFromFilename,
-  formatImportBatchLabel,
-} from "./batch-label";
-
-describe("extractPeriodMonthFromFilename", () => {
-  it("reads month from TMM-YYYY pattern", () => {
-    expect(extractPeriodMonthFromFilename("VAT TU T12-2025 (HOAI).xlsx")).toBe(
-      12,
-    );
-    expect(extractPeriodMonthFromFilename("VAT TU T1-2026.xlsx")).toBe(1);
-  });
-
-  it("returns null when pattern is missing", () => {
-    expect(extractPeriodMonthFromFilename("TH CHI TIẾT NĂM 2025.xlsx")).toBe(
-      null,
-    );
-  });
-});
+import { formatImportBatchLabel } from "./batch-label";
 
 describe("formatImportBatchLabel", () => {
-  it("formats annual as year summary", () => {
+  it("formats annual as year summary from payment dates", () => {
     expect(
       formatImportBatchLabel({
-        source_filename: "TH CHI TIẾT NĂM 2025 (HOAI).xlsx",
-        period_year: 2025,
         batch_kind: "annual",
+        period_year: 2025,
+        payment_date_min: "2025-01-05",
+        payment_date_max: "2025-12-20",
       }),
     ).toBe("Tổng hợp năm 2025");
   });
 
-  it("formats period as month/year", () => {
+  it("formats period as a single ngay when min equals max", () => {
     expect(
       formatImportBatchLabel({
-        source_filename: "VAT TU T12-2025 (HOAI).xlsx",
-        period_year: 2025,
         batch_kind: "period",
+        period_year: 2025,
+        payment_date_min: "2025-10-02",
+        payment_date_max: "2025-10-02",
       }),
-    ).toBe("Tháng 12/2025");
+    ).toBe("02/10/2025");
   });
 
-  it("falls back for unknown kind", () => {
+  it("formats period as a ngay range", () => {
     expect(
       formatImportBatchLabel({
-        source_filename: "random.xlsx",
-        period_year: 2026,
+        batch_kind: "period",
+        period_year: 2025,
+        payment_date_min: "2025-10-02",
+        payment_date_max: "2025-10-31",
+      }),
+    ).toBe("02/10/2025 – 31/10/2025");
+  });
+
+  it("falls back to period_year when dates are missing", () => {
+    expect(
+      formatImportBatchLabel({
         batch_kind: "unknown",
+        period_year: 2026,
+        payment_date_min: null,
+        payment_date_max: null,
       }),
     ).toBe("Năm 2026");
   });

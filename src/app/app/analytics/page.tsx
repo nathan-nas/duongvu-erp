@@ -18,6 +18,11 @@ const emptySeries = {
   expenseAll: [] as SpendAggregate[],
 };
 
+function isoDateOrNull(value: unknown): string | null {
+  if (typeof value !== "string" || value === "") return null;
+  return value.slice(0, 10);
+}
+
 export default async function AnalyticsPage({
   searchParams,
 }: AnalyticsPageProps) {
@@ -30,17 +35,34 @@ export default async function AnalyticsPage({
     .eq("status", "ready")
     .order("created_at", { ascending: false });
 
-  const batches: AnalyticsBatch[] = (batchRows ?? []).map((batch) => ({
-    id: String(batch.id),
-    source_filename: String(batch.source_filename),
-    period_year: Number(batch.period_year),
-    batch_kind:
-      batch.batch_kind === "annual" || batch.batch_kind === "period"
-        ? batch.batch_kind
-        : "unknown",
-    fact_rows: Number(batch.fact_rows ?? 0),
-    amount_sum: Number(batch.amount_sum ?? 0),
-  }));
+  const { data: dateBounds } = await supabase.rpc("spend_batch_date_bounds");
+  const boundsByBatch = new Map<
+    string,
+    { min: string | null; max: string | null }
+  >();
+  for (const row of dateBounds ?? []) {
+    boundsByBatch.set(String(row.batch_id), {
+      min: isoDateOrNull(row.min_payment_date),
+      max: isoDateOrNull(row.max_payment_date),
+    });
+  }
+
+  const batches: AnalyticsBatch[] = (batchRows ?? []).map((batch) => {
+    const bounds = boundsByBatch.get(String(batch.id));
+    return {
+      id: String(batch.id),
+      source_filename: String(batch.source_filename),
+      period_year: Number(batch.period_year),
+      batch_kind:
+        batch.batch_kind === "annual" || batch.batch_kind === "period"
+          ? batch.batch_kind
+          : "unknown",
+      fact_rows: Number(batch.fact_rows ?? 0),
+      amount_sum: Number(batch.amount_sum ?? 0),
+      payment_date_min: bounds?.min ?? null,
+      payment_date_max: bounds?.max ?? null,
+    };
+  });
 
   const params = await searchParams;
   const requestedBatchId =
