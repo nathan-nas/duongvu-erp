@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowUpDown, Columns3, X } from "lucide-react";
+import { ArrowUpDown, Columns3, Pencil, Plus, Trash2, X } from "lucide-react";
 import { TableVirtuoso } from "react-virtuoso";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,8 @@ import type { AnalyticsLine } from "@/api/analytics";
 import type { SpendAggregate } from "@/lib/spend/aggregations";
 import { formatVnd, formatViDate } from "@/lib/spend/format";
 import { cn } from "@/lib/utils";
+import { SpendLineDeleteDialog } from "./spend-line-delete-dialog";
+import { SpendLineFormDialog } from "./spend-line-form-dialog";
 
 const VIRTUALIZE_MIN_ROWS = 40;
 const VIRTUAL_TABLE_HEIGHT = 560;
@@ -20,6 +22,9 @@ type LinesProps = {
   totalCount?: number;
   loading?: boolean;
   error?: string | null;
+  editable?: boolean;
+  showClose?: boolean;
+  onLinesChanged?: () => void;
   groups?: never;
   groupLabel?: never;
   onClose: () => void;
@@ -34,6 +39,9 @@ type GroupsProps = {
   totalCount?: never;
   loading?: never;
   error?: never;
+  editable?: never;
+  showClose?: boolean;
+  onLinesChanged?: never;
   onClose: () => void;
 };
 
@@ -203,6 +211,8 @@ function renderLineCell(line: AnalyticsLine, key: LineSortKey) {
 export function DetailSheet(props: Props) {
   const { title, totalAmount, onClose } = props;
   const isGroups = "groups" in props && props.groups != null;
+  const editable = !isGroups && props.editable !== false;
+  const showClose = props.showClose !== false;
 
   const [lineSortKey, setLineSortKey] = useState<LineSortKey | null>(null);
   const [groupSortKey, setGroupSortKey] = useState<GroupSortKey | null>(null);
@@ -211,6 +221,12 @@ export function DetailSheet(props: Props) {
     () => new Set(DEFAULT_VISIBLE),
   );
   const [columnPickerOpen, setColumnPickerOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [formMode, setFormMode] = useState<
+    { kind: "create" } | { kind: "edit"; line: AnalyticsLine } | null
+  >(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteLine, setDeleteLine] = useState<AnalyticsLine | null>(null);
 
   const visibleColumns = useMemo(
     () => lineColumns.filter((col) => visibleKeys.has(col.key)),
@@ -312,8 +328,53 @@ export function DetailSheet(props: Props) {
           align={col.align}
         />
       ))}
+      {editable ? (
+        <th className="whitespace-nowrap px-4 py-3 text-right text-xs font-semibold text-muted-foreground">
+          Thao tác
+        </th>
+      ) : null}
     </tr>
   );
+
+  function renderLineActions(line: AnalyticsLine) {
+    if (!editable) return null;
+    return (
+      <td className="whitespace-nowrap px-2 py-1.5 text-right">
+        <div className="inline-flex items-center gap-0.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-label="Sửa dòng"
+            onClick={(e) => {
+              e.stopPropagation();
+              setFormMode({ kind: "edit", line });
+              setFormOpen(true);
+            }}
+          >
+            <Pencil className="size-3.5" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-label="Xóa dòng"
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteLine(line);
+              setDeleteOpen(true);
+            }}
+          >
+            <Trash2 className="size-3.5" />
+          </Button>
+        </div>
+      </td>
+    );
+  }
+
+  function handleMutated() {
+    props.onLinesChanged?.();
+  }
 
   return (
     <Card className="motion-enter shadow-sm">
@@ -323,6 +384,20 @@ export function DetailSheet(props: Props) {
           <p className="text-sm text-muted-foreground">{subtitle}</p>
         </div>
         <div className="flex items-center gap-1">
+          {editable ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setFormMode({ kind: "create" });
+                setFormOpen(true);
+              }}
+            >
+              <Plus className="size-4" />
+              Thêm dòng
+            </Button>
+          ) : null}
           {!isGroups && (
             <div className="relative">
               <Button
@@ -336,7 +411,7 @@ export function DetailSheet(props: Props) {
                 <Columns3 className="size-4" />
               </Button>
               {columnPickerOpen && (
-                <div className="absolute right-0 z-20 mt-1 w-52 rounded-md border bg-popover p-3 shadow-md">
+                <div className="absolute right-0 z-20 mt-1 w-52 rounded-md border bg-popover p-3 shadow-md duration-150 data-open:animate-in">
                   <p className="mb-2 text-xs font-medium text-muted-foreground">
                     Cột hiển thị
                   </p>
@@ -359,9 +434,16 @@ export function DetailSheet(props: Props) {
               )}
             </div>
           )}
-          <Button variant="ghost" size="sm" onClick={onClose} aria-label="Đóng">
-            <X className="size-4" />
-          </Button>
+          {showClose ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              aria-label="Đóng"
+            >
+              <X className="size-4" />
+            </Button>
+          ) : null}
         </div>
       </CardHeader>
       <CardContent
@@ -449,6 +531,7 @@ export function DetailSheet(props: Props) {
                     {visibleColumns.map((col) =>
                       renderLineCell(line, col.key),
                     )}
+                    {renderLineActions(line)}
                   </>
                 )}
                 components={{
@@ -481,6 +564,7 @@ export function DetailSheet(props: Props) {
                       {visibleColumns.map((col) =>
                         renderLineCell(line, col.key),
                       )}
+                      {renderLineActions(line)}
                     </tr>
                   ))}
                 </tbody>
@@ -489,6 +573,23 @@ export function DetailSheet(props: Props) {
           </>
         )}
       </CardContent>
+
+      {editable ? (
+        <>
+          <SpendLineFormDialog
+            open={formOpen}
+            mode={formMode}
+            onOpenChange={setFormOpen}
+            onSaved={handleMutated}
+          />
+          <SpendLineDeleteDialog
+            open={deleteOpen}
+            line={deleteLine}
+            onOpenChange={setDeleteOpen}
+            onDeleted={handleMutated}
+          />
+        </>
+      ) : null}
     </Card>
   );
 }

@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Upload, BarChart3, LogOut } from "lucide-react";
+import {
+  LayoutDashboard,
+  Upload,
+  BarChart3,
+  Database,
+  LogOut,
+} from "lucide-react";
 import { signOut } from "@/app/auth/actions";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/ui-store";
@@ -11,6 +17,12 @@ const navItems = [
   { href: "/app", label: "Trang chủ", icon: LayoutDashboard, exact: true },
   { href: "/app/uploads", label: "Tải lên", icon: Upload, exact: false },
   { href: "/app/analytics", label: "Phân tích", icon: BarChart3, exact: false },
+  {
+    href: "/app/data",
+    label: "Quản lý dữ liệu",
+    icon: Database,
+    exact: false,
+  },
 ];
 
 type Props = { email: string | null };

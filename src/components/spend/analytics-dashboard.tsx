@@ -321,6 +321,10 @@ export function AnalyticsDashboard({
             totalCount={pageTotalCount}
             loading={pageLoading}
             error={pageError}
+            editable
+            onLinesChanged={() => {
+              void loadLines(drill.field, drill.value);
+            }}
             onClose={handleClose}
           />
         )}
