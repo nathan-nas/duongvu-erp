@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { ArrowUpDown, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import type { AnalyticsLine } from "./analytics-dashboard";
+import type { AnalyticsLine } from "@/app/app/actions/analytics";
 import type { SpendAggregate } from "@/lib/spend/aggregations";
 import { formatVnd, formatViDate } from "@/lib/spend/format";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,13 @@ type LinesProps = {
   title: string;
   totalAmount: number;
   lines: AnalyticsLine[];
+  totalCount?: number;
+  loading?: boolean;
+  error?: string | null;
+  pageOffset?: number;
+  pageSize?: number;
+  onPrevPage?: () => void;
+  onNextPage?: () => void;
   groups?: never;
   groupLabel?: never;
   onClose: () => void;
@@ -24,6 +31,13 @@ type GroupsProps = {
   groups: SpendAggregate[];
   groupLabel: string;
   lines?: never;
+  totalCount?: never;
+  loading?: never;
+  error?: never;
+  pageOffset?: never;
+  pageSize?: never;
+  onPrevPage?: never;
+  onNextPage?: never;
   onClose: () => void;
 };
 
@@ -141,9 +155,22 @@ export function DetailSheet(props: Props) {
     }
   }
 
+  const lineCountLabel = !isGroups
+    ? (props.totalCount ?? props.lines?.length ?? 0)
+    : 0;
+
   const subtitle = isGroups
     ? `${formatVnd(totalAmount)} — ${props.groups!.length.toLocaleString("vi-VN")} nhóm`
-    : `${formatVnd(totalAmount)} — ${props.lines!.length.toLocaleString("vi-VN")} dòng`;
+    : `${formatVnd(totalAmount)} — ${lineCountLabel.toLocaleString("vi-VN")} dòng`;
+
+  const pageOffset = !isGroups ? (props.pageOffset ?? 0) : 0;
+  const pageSize = !isGroups ? (props.pageSize ?? 50) : 50;
+  const totalCount = !isGroups ? (props.totalCount ?? props.lines?.length ?? 0) : 0;
+  const showPaging =
+    !isGroups &&
+    typeof props.onPrevPage === "function" &&
+    typeof props.onNextPage === "function" &&
+    totalCount > pageSize;
 
   return (
     <Card className="shadow-sm">
@@ -157,6 +184,14 @@ export function DetailSheet(props: Props) {
         </Button>
       </CardHeader>
       <CardContent className="overflow-auto max-h-[600px]">
+        {!isGroups && props.loading && (
+          <p className="mb-3 text-sm text-muted-foreground" aria-live="polite">
+            Đang tải…
+          </p>
+        )}
+        {!isGroups && props.error && (
+          <p className="mb-3 text-sm text-destructive">{props.error}</p>
+        )}
         {isGroups ? (
           <table className="w-full text-left text-sm">
             <thead className="sticky top-0 z-10 border-b bg-muted/90 backdrop-blur">
@@ -195,65 +230,112 @@ export function DetailSheet(props: Props) {
             </tbody>
           </table>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead className="sticky top-0 z-10 border-b bg-muted/90 backdrop-blur">
-              <tr>
-                {lineColumns.map((col) => (
-                  <SortButton
-                    key={col.key}
-                    label={col.label}
-                    active={lineSortKey === col.key}
-                    onClick={() => handleLineSort(col.key)}
-                    align={col.align}
-                  />
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {sortedLines.map((line) => (
-                <tr key={line.id} className="hover:bg-muted/30">
-                  <td className="whitespace-nowrap px-4 py-2.5 text-xs">
-                    {formatViDate(line.payment_date)}
-                  </td>
-                  <td className="max-w-[180px] truncate px-4 py-2.5 text-xs" title={line.party_name ?? undefined}>
-                    <div className="font-medium">{line.party_name ?? "—"}</div>
-                    {line.party_code && (
-                      <div className="text-[10px] text-muted-foreground">{line.party_code}</div>
-                    )}
-                  </td>
-                  <td className="max-w-[200px] truncate px-4 py-2.5 text-xs" title={line.item_name ?? undefined}>
-                    <div>{line.item_name ?? "—"}</div>
-                    {line.uom && (
-                      <div className="text-[10px] text-muted-foreground">{line.uom}</div>
-                    )}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums">
-                    {line.qty != null ? line.qty.toLocaleString("vi-VN") : "—"}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums">
-                    {line.unit_price != null ? formatVnd(line.unit_price) : "—"}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums font-semibold">
-                    {line.amount != null ? formatVnd(line.amount) : "—"}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2.5">
-                    {line.plant_name ? (
-                      <span className="inline-flex rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                        {line.plant_name}
-                      </span>
-                    ) : "—"}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2.5">
-                    {line.expense_code ? (
-                      <span className="inline-flex rounded-md bg-muted px-2 py-0.5 text-[10px] font-medium">
-                        {line.expense_code}
-                      </span>
-                    ) : "—"}
-                  </td>
+          <>
+            <table className="w-full text-left text-sm">
+              <thead className="sticky top-0 z-10 border-b bg-muted/90 backdrop-blur">
+                <tr>
+                  {lineColumns.map((col) => (
+                    <SortButton
+                      key={col.key}
+                      label={col.label}
+                      active={lineSortKey === col.key}
+                      onClick={() => handleLineSort(col.key)}
+                      align={col.align}
+                    />
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y">
+                {sortedLines.map((line) => (
+                  <tr key={line.id} className="hover:bg-muted/30">
+                    <td className="whitespace-nowrap px-4 py-2.5 text-xs">
+                      {formatViDate(line.payment_date)}
+                    </td>
+                    <td
+                      className="max-w-[180px] truncate px-4 py-2.5 text-xs"
+                      title={line.party_name ?? undefined}
+                    >
+                      <div className="font-medium">{line.party_name ?? "—"}</div>
+                      {line.party_code && (
+                        <div className="text-[10px] text-muted-foreground">
+                          {line.party_code}
+                        </div>
+                      )}
+                    </td>
+                    <td
+                      className="max-w-[200px] truncate px-4 py-2.5 text-xs"
+                      title={line.item_name ?? undefined}
+                    >
+                      <div>{line.item_name ?? "—"}</div>
+                      {line.uom && (
+                        <div className="text-[10px] text-muted-foreground">
+                          {line.uom}
+                        </div>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums">
+                      {line.qty != null ? line.qty.toLocaleString("vi-VN") : "—"}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums">
+                      {line.unit_price != null ? formatVnd(line.unit_price) : "—"}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums font-semibold">
+                      {line.amount != null ? formatVnd(line.amount) : "—"}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2.5">
+                      {line.plant_name ? (
+                        <span className="inline-flex rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                          {line.plant_name}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2.5">
+                      {line.expense_code ? (
+                        <span className="inline-flex rounded-md bg-muted px-2 py-0.5 text-[10px] font-medium">
+                          {line.expense_code}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {showPaging && (
+              <div className="mt-4 flex items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">
+                  {pageOffset + 1}–
+                  {Math.min(pageOffset + pageSize, totalCount)} /{" "}
+                  {totalCount.toLocaleString("vi-VN")}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={pageOffset <= 0 || props.loading}
+                    onClick={props.onPrevPage}
+                  >
+                    Trước
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={
+                      pageOffset + pageSize >= totalCount || props.loading
+                    }
+                    onClick={props.onNextPage}
+                  >
+                    Sau
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

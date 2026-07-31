@@ -1,6 +1,10 @@
 "use client";
 
 import { useState, type ChangeEvent } from "react";
+import {
+  createPendingBatch,
+  prepareImport,
+} from "@/app/app/actions/import-spend";
 import { ConfirmImport } from "@/components/spend/confirm-import";
 import {
   Card,
@@ -9,53 +13,90 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { parseSpendWorkbook } from "@/lib/spend/parse-workbook";
-import type { ParsedWorkbookPreview } from "@/lib/spend/types";
+import { createClient } from "@/lib/supabase/client";
+import { SPEND_UPLOADS_BUCKET } from "@/lib/spend/constants";
+import { extractPeriodYearFromFilename } from "@/lib/spend/period-year";
+import type { BatchKind } from "@/lib/spend/types";
 
-type UploadState = {
-  file: ArrayBuffer;
+type PreparedUpload = {
+  batchId: string;
   filename: string;
-  preview: ParsedWorkbookPreview;
+  factRows: number;
+  amountSum: number;
+  batchKind: BatchKind;
+  periodYear: number;
 };
 
 export function UploadWizard() {
-  const [upload, setUpload] = useState<UploadState | null>(null);
+  const [prepared, setPrepared] = useState<PreparedUpload | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isParsing, setIsParsing] = useState(false);
+  const [isWorking, setIsWorking] = useState(false);
 
   async function selectFile(event: ChangeEvent<HTMLInputElement>) {
     const selectedFile = event.target.files?.[0];
     if (!selectedFile) return;
 
     setError(null);
-    setUpload(null);
-    setIsParsing(true);
+    setPrepared(null);
+    setIsWorking(true);
 
     try {
-      const file = await selectedFile.arrayBuffer();
-      const preview = parseSpendWorkbook(file, selectedFile.name);
+      const suggestedYear =
+        extractPeriodYearFromFilename(selectedFile.name) ??
+        new Date().getFullYear();
 
-      if (!preview.hasFactSheet || preview.factRows === 0) {
-        setError(
-          "Không tìm thấy sheet BANG CHI TIET hoặc không đọc được tiêu đề.",
-        );
+      const pending = await createPendingBatch({
+        source_filename: selectedFile.name,
+        period_year: suggestedYear,
+      });
+
+      if ("error" in pending) {
+        setError(pending.error);
         return;
       }
 
-      setUpload({ file, filename: selectedFile.name, preview });
+      const supabase = createClient();
+      const { error: uploadError } = await supabase.storage
+        .from(SPEND_UPLOADS_BUCKET)
+        .upload(pending.storagePath, selectedFile, {
+          contentType: selectedFile.type || "application/octet-stream",
+          upsert: true,
+        });
+
+      if (uploadError) {
+        setError("Không tải được file lên máy chủ.");
+        return;
+      }
+
+      const preview = await prepareImport(pending.batchId);
+      if ("error" in preview) {
+        setError(preview.error);
+        return;
+      }
+
+      setPrepared({
+        batchId: preview.batchId,
+        filename: preview.sourceFilename,
+        factRows: preview.factRows,
+        amountSum: preview.amountSum,
+        batchKind: preview.batchKind,
+        periodYear:
+          preview.suggestedPeriodYear ?? preview.periodYear ?? suggestedYear,
+      });
     } catch {
-      setError("Không thể đọc file Excel. Vui lòng chọn lại file.");
+      setError("Không thể xử lý file Excel. Vui lòng chọn lại file.");
     } finally {
-      setIsParsing(false);
+      setIsWorking(false);
+      event.target.value = "";
     }
   }
 
-  if (upload) {
+  if (prepared) {
     return (
       <ConfirmImport
-        {...upload}
+        {...prepared}
         onCancel={() => {
-          setUpload(null);
+          setPrepared(null);
           setError(null);
         }}
       />
@@ -83,14 +124,14 @@ export function UploadWizard() {
             id="spend-file"
             type="file"
             accept=".xlsx,.xls"
-            disabled={isParsing}
+            disabled={isWorking}
             onChange={selectFile}
             className="sr-only"
           />
         </label>
-        {isParsing && (
+        {isWorking && (
           <p className="text-sm text-muted-foreground" aria-live="polite">
-            Đang đọc file…
+            Đang tải lên và đọc file…
           </p>
         )}
         {error && <p className="text-sm text-destructive">{error}</p>}

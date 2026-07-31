@@ -6,13 +6,13 @@ React components for the spend (expense) feature: upload wizard, analytics dashb
 
 | File | Purpose |
 |------|---------|
-| `upload-wizard.tsx` | File picker + dropzone for Excel upload |
-| `confirm-import.tsx` | Preview parsed data, chunk + submit to server actions |
-| `analytics-dashboard.tsx` | KPI cards + expandable chart cards + filter controls |
+| `upload-wizard.tsx` | File picker; creates pending batch, uploads to Storage, calls prepareImport |
+| `confirm-import.tsx` | Preview server stats, confirm year, commitImport |
+| `analytics-dashboard.tsx` | KPI cards + expandable chart cards; drill-down via paginated RPC |
 | `spend-treemap.tsx` | Recharts Treemap (by plant or expense code) |
 | `spend-area-chart.tsx` | Recharts AreaChart (monthly trend) |
 | `spend-bar-chart.tsx` | Recharts BarChart (legacy, may be removed) |
-| `detail-sheet.tsx` | Slide-over panel showing contributing line items on click |
+| `detail-sheet.tsx` | Slide-over panel with paginated contributing line items |
 
 ## Conventions
 

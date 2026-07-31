@@ -1,9 +1,14 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Maximize2, Minimize2 } from "lucide-react";
+import {
+  fetchSpendLinesPage,
+  type AnalyticsLine,
+  type SpendFilterKind,
+} from "@/app/app/actions/analytics";
 import {
   Card,
   CardContent,
@@ -18,12 +23,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { sumBy, sumByMonth, type SpendAggregate } from "@/lib/spend/aggregations";
+import type { SpendAggregate } from "@/lib/spend/aggregations";
+import { SPEND_LINES_PAGE_SIZE } from "@/lib/spend/constants";
 import { formatVnd } from "@/lib/spend/format";
 import { SpendTreemap } from "./spend-treemap";
 import { SpendAreaChart } from "./spend-area-chart";
 import { DetailSheet } from "./detail-sheet";
 import { cn } from "@/lib/utils";
+
+const DETAIL_ANCHOR_ID = "spend-detail-panel";
+
+function scrollToDetail() {
+  setTimeout(() => {
+    document
+      .getElementById(DETAIL_ANCHOR_ID)
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 50);
+}
 
 export type AnalyticsBatch = {
   id: string;
@@ -34,29 +50,16 @@ export type AnalyticsBatch = {
   amount_sum: number;
 };
 
-export type AnalyticsLine = {
-  id: string;
-  payment_date: string | null;
-  party_code: string | null;
-  party_name: string | null;
-  item_code: string | null;
-  item_name: string | null;
-  uom: string | null;
-  qty: number | null;
-  unit_price: number | null;
-  amount: number | null;
-  plant_name: string | null;
-  expense_code: string | null;
-  payment_method: string | null;
-  description: string | null;
-  invoice: string | null;
-  note: string | null;
-};
+export type { AnalyticsLine };
 
 type AnalyticsDashboardProps = {
   batches: AnalyticsBatch[];
   selectedBatchId: string | null;
-  lines: AnalyticsLine[];
+  plantData: SpendAggregate[];
+  expenseData: SpendAggregate[];
+  monthData: SpendAggregate[];
+  plantAll: SpendAggregate[];
+  expenseAll: SpendAggregate[];
 };
 
 const batchKindLabel = {
@@ -71,7 +74,7 @@ type DrillState =
   | {
       kind: "lines";
       title: string;
-      field: "all" | "plant_name" | "expense_code" | "month";
+      field: SpendFilterKind;
       value: string;
       source: ExpandedCard | "kpi";
     }
@@ -86,105 +89,138 @@ type DrillState =
 export function AnalyticsDashboard({
   batches,
   selectedBatchId,
-  lines,
+  plantData,
+  expenseData,
+  monthData,
+  plantAll,
+  expenseAll,
 }: AnalyticsDashboardProps) {
   const router = useRouter();
   const [drill, setDrill] = useState<DrillState | null>(null);
   const [expanded, setExpanded] = useState<ExpandedCard>(null);
-  const detailRef = useRef<HTMLDivElement>(null);
+  const [pageLines, setPageLines] = useState<AnalyticsLine[]>([]);
+  const [pageTotalCount, setPageTotalCount] = useState(0);
+  const [pageTotalAmount, setPageTotalAmount] = useState(0);
+  const [pageOffset, setPageOffset] = useState(0);
+  const [pageLoading, setPageLoading] = useState(false);
+  const [pageError, setPageError] = useState<string | null>(null);
 
   const batchLabelMap = useMemo(() => {
     const map = new Map<string, string>();
     for (const b of batches) {
-      map.set(b.id, `${b.source_filename} — ${b.period_year} (${batchKindLabel[b.batch_kind]})`);
+      map.set(
+        b.id,
+        `${b.source_filename} — ${b.period_year} (${batchKindLabel[b.batch_kind]})`,
+      );
     }
     return map;
   }, [batches]);
 
-  const plantData = useMemo(() => sumBy(lines, "plant_name", 15), [lines]);
-  const expenseData = useMemo(() => sumBy(lines, "expense_code", 15), [lines]);
-  const monthData = useMemo(() => sumByMonth(lines), [lines]);
-  const allPlantGroups = useMemo(() => sumBy(lines, "plant_name"), [lines]);
-  const allExpenseGroups = useMemo(() => sumBy(lines, "expense_code"), [lines]);
-
-  const filteredLines = useMemo(() => {
-    if (!drill || drill.kind !== "lines") return [];
-    if (drill.field === "all") return lines;
-    if (drill.field === "month") {
-      return lines.filter((l) => l.payment_date?.startsWith(drill.value));
-    }
-    if (drill.field === "plant_name") {
-      return lines.filter((l) => l.plant_name === drill.value);
-    }
-    return lines.filter((l) => l.expense_code === drill.value);
-  }, [lines, drill]);
-
-  const filteredTotal = useMemo(
-    () => filteredLines.reduce((s, l) => s + (l.amount ?? 0), 0),
-    [filteredLines],
+  const loadLinesPage = useCallback(
+    async (field: SpendFilterKind, value: string, offset: number) => {
+      if (!selectedBatchId) return;
+      setPageLoading(true);
+      setPageError(null);
+      const result = await fetchSpendLinesPage({
+        batchId: selectedBatchId,
+        filterKind: field,
+        filterValue: value,
+        offset,
+        limit: SPEND_LINES_PAGE_SIZE,
+      });
+      setPageLoading(false);
+      if ("error" in result) {
+        setPageError(result.error);
+        setPageLines([]);
+        setPageTotalCount(0);
+        setPageTotalAmount(0);
+        return;
+      }
+      setPageLines(result.lines);
+      setPageTotalCount(result.totalCount);
+      setPageTotalAmount(result.totalAmount);
+      setPageOffset(offset);
+    },
+    [selectedBatchId],
   );
 
-  const scrollToDetail = useCallback(() => {
-    setTimeout(() => detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
-  }, []);
+  const openLinesDrill = useCallback(
+    (next: Extract<DrillState, { kind: "lines" }>) => {
+      setDrill(next);
+      void loadLinesPage(next.field, next.value, 0);
+      scrollToDetail();
+    },
+    [loadLinesPage],
+  );
 
   const openAllLines = useCallback(
     (source: ExpandedCard, title: string) => {
       if (!source) return;
-      setDrill({ kind: "lines", title, field: "all", value: "", source });
-      scrollToDetail();
+      openLinesDrill({
+        kind: "lines",
+        title,
+        field: "all",
+        value: "",
+        source,
+      });
     },
-    [scrollToDetail],
+    [openLinesDrill],
   );
 
   const handlePlantClick = useCallback(
     (label: string) => {
-      setDrill({
+      openLinesDrill({
         kind: "lines",
         title: `NM: ${label}`,
         field: "plant_name",
         value: label,
         source: "plant",
       });
-      scrollToDetail();
     },
-    [scrollToDetail],
+    [openLinesDrill],
   );
 
   const handleExpenseClick = useCallback(
     (label: string) => {
-      setDrill({
+      openLinesDrill({
         kind: "lines",
         title: `Mã: ${label}`,
         field: "expense_code",
         value: label,
         source: "expense",
       });
-      scrollToDetail();
     },
-    [scrollToDetail],
+    [openLinesDrill],
   );
 
   const handleMonthClick = useCallback(
     (label: string) => {
-      setDrill({
+      openLinesDrill({
         kind: "lines",
         title: `Tháng: ${label}`,
         field: "month",
         value: label,
         source: "month",
       });
-      scrollToDetail();
     },
-    [scrollToDetail],
+    [openLinesDrill],
   );
 
-  const handleClose = useCallback(() => setDrill(null), []);
+  const handleClose = useCallback(() => {
+    setDrill(null);
+    setPageLines([]);
+    setPageTotalCount(0);
+    setPageTotalAmount(0);
+    setPageOffset(0);
+    setPageError(null);
+  }, []);
 
   function toggleExpand(card: NonNullable<ExpandedCard>, title: string) {
     if (expanded === card) {
       setExpanded(null);
-      setDrill((d) => (d && d.source === card ? null : d));
+      if (drill && drill.source === card) {
+        handleClose();
+      }
       return;
     }
     setExpanded(card);
@@ -207,22 +243,21 @@ export function AnalyticsDashboard({
 
   const selectedBatch = batches.find((b) => b.id === selectedBatchId)!;
   const totalAmount = selectedBatch.amount_sum;
-  const plantCount = allPlantGroups.length;
-  const expenseCodeCount = allExpenseGroups.length;
+  const plantCount = plantAll.length;
+  const expenseCodeCount = expenseAll.length;
 
   const kpis = [
     {
       label: "Tổng chi",
       value: formatVnd(totalAmount),
       onClick: () => {
-        setDrill({
+        openLinesDrill({
           kind: "lines",
           title: "Tất cả dòng chi",
           field: "all",
           value: "",
           source: "kpi",
         });
-        scrollToDetail();
       },
     },
     {
@@ -233,7 +268,7 @@ export function AnalyticsDashboard({
           kind: "groups",
           title: "Tổng hợp theo nhà máy",
           groupLabel: "Nhà máy",
-          groups: allPlantGroups,
+          groups: plantAll,
           source: "kpi",
         });
         scrollToDetail();
@@ -247,7 +282,7 @@ export function AnalyticsDashboard({
           kind: "groups",
           title: "Tổng hợp theo mã chi",
           groupLabel: "Mã chi",
-          groups: allExpenseGroups,
+          groups: expenseAll,
           source: "kpi",
         });
         scrollToDetail();
@@ -262,7 +297,7 @@ export function AnalyticsDashboard({
   function renderDetail(source: DrillState["source"]) {
     if (!drill || drill.source !== source) return null;
     return (
-      <div ref={detailRef}>
+      <div id={DETAIL_ANCHOR_ID}>
         {drill.kind === "groups" ? (
           <DetailSheet
             title={drill.title}
@@ -274,8 +309,23 @@ export function AnalyticsDashboard({
         ) : (
           <DetailSheet
             title={drill.title}
-            totalAmount={filteredTotal}
-            lines={filteredLines}
+            totalAmount={pageTotalAmount}
+            lines={pageLines}
+            totalCount={pageTotalCount}
+            loading={pageLoading}
+            error={pageError}
+            pageOffset={pageOffset}
+            pageSize={SPEND_LINES_PAGE_SIZE}
+            onPrevPage={() => {
+              const next = Math.max(0, pageOffset - SPEND_LINES_PAGE_SIZE);
+              void loadLinesPage(drill.field, drill.value, next);
+            }}
+            onNextPage={() => {
+              const next = pageOffset + SPEND_LINES_PAGE_SIZE;
+              if (next < pageTotalCount) {
+                void loadLinesPage(drill.field, drill.value, next);
+              }
+            }}
             onClose={handleClose}
           />
         )}
@@ -291,17 +341,22 @@ export function AnalyticsDashboard({
             <span>Lô dữ liệu</span>
             <Select
               value={selectedBatchId}
-              onValueChange={(val) => router.push(`/app/analytics?batch=${val}`)}
+              onValueChange={(val) =>
+                router.push(`/app/analytics?batch=${val}`)
+              }
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Chọn lô dữ liệu">
-                  {selectedBatchId ? batchLabelMap.get(selectedBatchId) : null}
+                  {selectedBatchId
+                    ? batchLabelMap.get(selectedBatchId)
+                    : null}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {batches.map((batch) => (
                   <SelectItem key={batch.id} value={batch.id}>
-                    {batch.source_filename} — {batch.period_year} ({batchKindLabel[batch.batch_kind]})
+                    {batch.source_filename} — {batch.period_year} (
+                    {batchKindLabel[batch.batch_kind]})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -310,7 +365,10 @@ export function AnalyticsDashboard({
         </CardContent>
       </Card>
 
-      <section className="grid gap-4 sm:grid-cols-3" aria-label="Chỉ số tổng quan">
+      <section
+        className="grid gap-4 sm:grid-cols-3"
+        aria-label="Chỉ số tổng quan"
+      >
         {kpis.map((kpi) => (
           <Card
             key={kpi.label}
@@ -318,7 +376,9 @@ export function AnalyticsDashboard({
             onClick={kpi.onClick}
           >
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground">{kpi.label}</CardTitle>
+              <CardTitle className="text-xs font-medium text-muted-foreground">
+                {kpi.label}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">{kpi.value}</p>
@@ -329,7 +389,9 @@ export function AnalyticsDashboard({
 
       {renderDetail("kpi")}
 
-      <section className={cn("grid gap-6", expanded === null && "lg:grid-cols-2")}>
+      <section
+        className={cn("grid gap-6", expanded === null && "lg:grid-cols-2")}
+      >
         {showPlant && (
           <Card
             className="cursor-pointer shadow-sm hover:ring-2 hover:ring-primary/30"
@@ -337,8 +399,12 @@ export function AnalyticsDashboard({
           >
             <CardHeader className="flex flex-row items-start justify-between">
               <div>
-                <CardTitle className="text-base">Chi theo nhà máy (NM)</CardTitle>
-                <p className="text-xs text-muted-foreground">Nhấn biểu đồ để lọc chi tiết</p>
+                <CardTitle className="text-base">
+                  Chi theo nhà máy (NM)
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Nhấn biểu đồ để lọc chi tiết
+                </p>
               </div>
               <Button
                 variant="ghost"
@@ -349,12 +415,14 @@ export function AnalyticsDashboard({
                 }}
                 aria-label={expanded === "plant" ? "Thu nhỏ" : "Phóng to"}
               >
-                {expanded === "plant" ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+                {expanded === "plant" ? (
+                  <Minimize2 className="size-4" />
+                ) : (
+                  <Maximize2 className="size-4" />
+                )}
               </Button>
             </CardHeader>
-            <CardContent
-              onClick={(e) => e.stopPropagation()}
-            >
+            <CardContent onClick={(e) => e.stopPropagation()}>
               <SpendTreemap data={plantData} onClickBlock={handlePlantClick} />
             </CardContent>
           </Card>
@@ -366,8 +434,12 @@ export function AnalyticsDashboard({
           >
             <CardHeader className="flex flex-row items-start justify-between">
               <div>
-                <CardTitle className="text-base">Chi theo mã chi phí (MÃ)</CardTitle>
-                <p className="text-xs text-muted-foreground">Nhấn biểu đồ để lọc chi tiết</p>
+                <CardTitle className="text-base">
+                  Chi theo mã chi phí (MÃ)
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Nhấn biểu đồ để lọc chi tiết
+                </p>
               </div>
               <Button
                 variant="ghost"
@@ -378,11 +450,18 @@ export function AnalyticsDashboard({
                 }}
                 aria-label={expanded === "expense" ? "Thu nhỏ" : "Phóng to"}
               >
-                {expanded === "expense" ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+                {expanded === "expense" ? (
+                  <Minimize2 className="size-4" />
+                ) : (
+                  <Maximize2 className="size-4" />
+                )}
               </Button>
             </CardHeader>
             <CardContent onClick={(e) => e.stopPropagation()}>
-              <SpendTreemap data={expenseData} onClickBlock={handleExpenseClick} />
+              <SpendTreemap
+                data={expenseData}
+                onClickBlock={handleExpenseClick}
+              />
             </CardContent>
           </Card>
         )}
@@ -398,8 +477,12 @@ export function AnalyticsDashboard({
         >
           <CardHeader className="flex flex-row items-start justify-between">
             <div>
-              <CardTitle className="text-base">Xu hướng chi theo tháng</CardTitle>
-              <p className="text-xs text-muted-foreground">Nhấn điểm để lọc chi tiết tháng</p>
+              <CardTitle className="text-base">
+                Xu hướng chi theo tháng
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Nhấn điểm để lọc chi tiết tháng
+              </p>
             </div>
             <Button
               variant="ghost"
@@ -410,7 +493,11 @@ export function AnalyticsDashboard({
               }}
               aria-label={expanded === "month" ? "Thu nhỏ" : "Phóng to"}
             >
-              {expanded === "month" ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+              {expanded === "month" ? (
+                <Minimize2 className="size-4" />
+              ) : (
+                <Maximize2 className="size-4" />
+              )}
             </Button>
           </CardHeader>
           <CardContent onClick={(e) => e.stopPropagation()}>

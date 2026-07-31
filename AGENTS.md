@@ -20,8 +20,8 @@ You are a primary contributor to this repository. Humans review; agents implemen
 ## Current features (as of 2026-07-29)
 
 1. **Auth** — email/password sign-up/in/out with Vietnamese error messages.
-2. **Spend upload** — Excel upload wizard (chunked import via server actions) for expense reports. Components in `src/components/spend/`, logic in `src/lib/spend/`.
-3. **Analytics** — interactive treemaps (plant / expense code) + area chart (monthly trends) with click-to-detail slide-over panel. Expandable chart cards.
+2. **Spend upload** — Excel upload wizard: browser uploads to Supabase Storage; Server Actions parse + chunked insert. Components in `src/components/spend/`, logic in `src/lib/spend/`.
+3. **Analytics** — interactive treemaps (plant / expense code) + area chart (monthly trends) via Postgres RPCs + click-to-detail with paginated drill-down. Expandable chart cards.
 4. **Shell layout** — persistent left sidebar (`AppSidebar`) + slim topbar (`AppTopbar`) with dark-mode toggle.
 
 ## Key paths
@@ -59,7 +59,7 @@ Follow skills in `.cursor/skills/` when relevant:
 
 ## Hard constraints
 
-- No business/org tables until product is defined (`auth.users` + `spend_batch` / `spend_line` only for now).
+- No business/org tables until product is defined (`auth.users` + `import_batch` / `spend_line` only for now).
 - Never put `SUPABASE_SERVICE_ROLE_KEY` in client code or `NEXT_PUBLIC_*`.
 - Do not add Docker, Railway, or non-Vercel deploy paths.
 - Do not invent ERP modules until a human asks for them.

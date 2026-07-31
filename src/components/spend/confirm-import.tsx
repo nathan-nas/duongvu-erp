@@ -3,11 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  createImportBatch,
-  insertSpendLinesChunk,
+  commitImport,
   markImportBatchFailed,
 } from "@/app/app/actions/import-spend";
-import { SPEND_LINE_CHUNK } from "@/lib/spend/constants";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,8 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatVnd } from "@/lib/spend/format";
-import { parseSpendWorkbook } from "@/lib/spend/parse-workbook";
-import type { ParsedWorkbookPreview } from "@/lib/spend/types";
+import type { BatchKind } from "@/lib/spend/types";
 
 const batchKindLabel = {
   annual: "Cả năm",
@@ -29,62 +26,44 @@ const batchKindLabel = {
 };
 
 type ConfirmImportProps = {
-  file: ArrayBuffer;
+  batchId: string;
   filename: string;
-  preview: ParsedWorkbookPreview;
+  factRows: number;
+  amountSum: number;
+  batchKind: BatchKind;
+  periodYear: number;
   onCancel: () => void;
 };
 
 export function ConfirmImport({
-  file,
+  batchId,
   filename,
-  preview,
+  factRows,
+  amountSum,
+  batchKind,
+  periodYear: initialPeriodYear,
   onCancel,
 }: ConfirmImportProps) {
   const router = useRouter();
-  const [periodYear, setPeriodYear] = useState(
-    preview.suggestedPeriodYear ?? new Date().getFullYear(),
-  );
-  const [progress, setProgress] = useState<number | null>(null);
+  const [periodYear, setPeriodYear] = useState(initialPeriodYear);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function confirmImport() {
     setError(null);
-    setProgress(0);
+    setSaving(true);
 
-    const parsed = parseSpendWorkbook(file, filename, periodYear);
-    const batchResult = await createImportBatch({
-      source_filename: filename,
-      period_year: periodYear,
-      batch_kind: parsed.batchKind,
-      fact_rows: parsed.factRows,
-      amount_sum: parsed.amountSum,
-    });
+    const result = await commitImport(batchId, periodYear);
 
-    if ("error" in batchResult) {
-      setError(batchResult.error);
-      setProgress(null);
+    if ("error" in result) {
+      await markImportBatchFailed(batchId);
+      setError(result.error);
+      setSaving(false);
       return;
     }
 
-    for (let start = 0; start < parsed.lines.length; start += SPEND_LINE_CHUNK) {
-      const chunk = parsed.lines.slice(start, start + SPEND_LINE_CHUNK);
-      const result = await insertSpendLinesChunk(batchResult.batchId, chunk);
-
-      if (result.error) {
-        await markImportBatchFailed(batchResult.batchId);
-        setError(result.error);
-        setProgress(null);
-        return;
-      }
-
-      setProgress(Math.min(start + chunk.length, parsed.lines.length));
-    }
-
-    router.push(`/app/analytics?batch=${batchResult.batchId}`);
+    router.push(`/app/analytics?batch=${result.batchId}`);
   }
-
-  const saving = progress !== null;
 
   return (
     <Card>
@@ -93,8 +72,12 @@ export function ConfirmImport({
       </CardHeader>
       <CardContent className="grid gap-4">
         <div>
+          <p className="text-sm text-muted-foreground">Tên file</p>
+          <p>{filename}</p>
+        </div>
+        <div>
           <p className="text-sm text-muted-foreground">Loại file</p>
-          <p>{batchKindLabel[preview.batchKind]}</p>
+          <p>{batchKindLabel[batchKind]}</p>
         </div>
         <div className="grid gap-2">
           <Label htmlFor="period-year">Năm hạch toán</Label>
@@ -110,16 +93,14 @@ export function ConfirmImport({
         </div>
         <div>
           <p className="text-sm text-muted-foreground">Số dòng</p>
-          <p>{preview.factRows.toLocaleString("vi-VN")}</p>
+          <p>{factRows.toLocaleString("vi-VN")}</p>
         </div>
         <div>
           <p className="text-sm text-muted-foreground">Tổng thành tiền</p>
-          <p>{formatVnd(preview.amountSum)}</p>
+          <p>{formatVnd(amountSum)}</p>
         </div>
         {saving && (
-          <p aria-live="polite">
-            Đang lưu… {progress}/{preview.factRows}
-          </p>
+          <p aria-live="polite">Đang lưu dữ liệu trên máy chủ…</p>
         )}
         {error && <p className="text-destructive">{error}</p>}
       </CardContent>

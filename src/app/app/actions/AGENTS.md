@@ -6,7 +6,8 @@ Server actions for the authenticated app area.
 
 | File | Purpose |
 |------|---------|
-| `import-spend.ts` | `createImportBatch`, `insertSpendLines`, `markImportBatchFailed` — chunked Excel import into Supabase `spend_batch` / `spend_line` tables. |
+| `import-spend.ts` | `createPendingBatch`, `prepareImport`, `commitImport`, `markImportBatchFailed` — Storage upload pipeline into `import_batch` / `spend_line`. |
+| `analytics.ts` | `fetchSpendAggregates`, `fetchSpendLinesPage` — SQL RPC wrappers for charts and paginated drill-down. |
 
 ## Conventions
 

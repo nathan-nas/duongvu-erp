@@ -1,23 +1,22 @@
 import {
   AnalyticsDashboard,
   type AnalyticsBatch,
-  type AnalyticsLine,
 } from "@/components/spend/analytics-dashboard";
+import { fetchSpendAggregates } from "@/app/app/actions/analytics";
 import { createClient } from "@/lib/supabase/server";
+import type { SpendAggregate } from "@/lib/spend/aggregations";
 
 type AnalyticsPageProps = {
   searchParams: Promise<{ batch?: string | string[] }>;
 };
 
-function stringOrNull(value: unknown): string | null {
-  return typeof value === "string" ? value : null;
-}
-
-function numberOrNull(value: unknown): number | null {
-  if (value == null || value === "") return null;
-  const number = Number(value);
-  return Number.isFinite(number) ? number : null;
-}
+const emptySeries = {
+  plant: [] as SpendAggregate[],
+  expense: [] as SpendAggregate[],
+  month: [] as SpendAggregate[],
+  plantAll: [] as SpendAggregate[],
+  expenseAll: [] as SpendAggregate[],
+};
 
 export default async function AnalyticsPage({
   searchParams,
@@ -25,8 +24,12 @@ export default async function AnalyticsPage({
   const supabase = await createClient();
   const { data: batchRows } = await supabase
     .from("import_batch")
-    .select("id, source_filename, period_year, batch_kind, fact_rows, amount_sum")
+    .select(
+      "id, source_filename, period_year, batch_kind, fact_rows, amount_sum, status",
+    )
+    .eq("status", "ready")
     .order("created_at", { ascending: false });
+
   const batches: AnalyticsBatch[] = (batchRows ?? []).map((batch) => ({
     id: String(batch.id),
     source_filename: String(batch.source_filename),
@@ -38,39 +41,17 @@ export default async function AnalyticsPage({
     fact_rows: Number(batch.fact_rows ?? 0),
     amount_sum: Number(batch.amount_sum ?? 0),
   }));
+
   const params = await searchParams;
   const requestedBatchId =
     typeof params.batch === "string" ? params.batch : undefined;
   const selectedBatchId = batches.some((batch) => batch.id === requestedBatchId)
     ? requestedBatchId!
     : (batches[0]?.id ?? null);
-  const { data: lineRows } = selectedBatchId
-    ? await supabase
-        .from("spend_line")
-        .select(
-          "id, payment_date, party_code, party_name, item_code, item_name, uom, qty, unit_price, amount, plant_name, expense_code, payment_method, description, invoice, note",
-        )
-        .eq("batch_id", selectedBatchId)
-        .order("payment_date", { ascending: true })
-    : { data: [] };
-  const lines: AnalyticsLine[] = (lineRows ?? []).map((line: Record<string, unknown>) => ({
-    id: String(line.id),
-    payment_date: stringOrNull(line.payment_date),
-    party_code: stringOrNull(line.party_code),
-    party_name: stringOrNull(line.party_name),
-    item_code: stringOrNull(line.item_code),
-    item_name: stringOrNull(line.item_name),
-    uom: stringOrNull(line.uom),
-    qty: numberOrNull(line.qty),
-    unit_price: numberOrNull(line.unit_price),
-    amount: numberOrNull(line.amount),
-    plant_name: stringOrNull(line.plant_name),
-    expense_code: stringOrNull(line.expense_code),
-    payment_method: stringOrNull(line.payment_method),
-    description: stringOrNull(line.description),
-    invoice: stringOrNull(line.invoice),
-    note: stringOrNull(line.note),
-  }));
+
+  const series = selectedBatchId
+    ? ((await fetchSpendAggregates(selectedBatchId)) ?? emptySeries)
+    : emptySeries;
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-6 py-10">
@@ -78,7 +59,11 @@ export default async function AnalyticsPage({
       <AnalyticsDashboard
         batches={batches}
         selectedBatchId={selectedBatchId}
-        lines={lines}
+        plantData={series.plant}
+        expenseData={series.expense}
+        monthData={series.month}
+        plantAll={series.plantAll}
+        expenseAll={series.expenseAll}
       />
     </main>
   );
