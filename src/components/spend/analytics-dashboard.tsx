@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import NumberFlow from "@number-flow/react";
 import { BarChart3, Maximize2, Minimize2 } from "lucide-react";
 import {
-  fetchSpendLinesPage,
+  fetchSpendLines,
   type AnalyticsLine,
   type SpendFilterKind,
 } from "@/api/analytics";
@@ -20,7 +20,6 @@ import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import type { SpendAggregate } from "@/lib/spend/aggregations";
-import { SPEND_LINES_PAGE_SIZE } from "@/lib/spend/constants";
 import { isIsoDate } from "@/lib/spend/date-range";
 import { SpendTreemap } from "./spend-treemap";
 import { SpendAreaChart } from "./spend-area-chart";
@@ -93,24 +92,21 @@ export function AnalyticsDashboard({
   const [pageLines, setPageLines] = useState<AnalyticsLine[]>([]);
   const [pageTotalCount, setPageTotalCount] = useState(0);
   const [pageTotalAmount, setPageTotalAmount] = useState(0);
-  const [pageOffset, setPageOffset] = useState(0);
   const [pageLoading, setPageLoading] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
 
   const hasRange = Boolean(from && to && !rangeError);
 
-  const loadLinesPage = useCallback(
-    async (field: SpendFilterKind, value: string, offset: number) => {
+  const loadLines = useCallback(
+    async (field: SpendFilterKind, value: string) => {
       if (!from || !to) return;
       setPageLoading(true);
       setPageError(null);
-      const result = await fetchSpendLinesPage({
+      const result = await fetchSpendLines({
         from,
         to,
         filterKind: field,
         filterValue: value,
-        offset,
-        limit: SPEND_LINES_PAGE_SIZE,
       });
       setPageLoading(false);
       if ("error" in result) {
@@ -123,7 +119,6 @@ export function AnalyticsDashboard({
       setPageLines(result.lines);
       setPageTotalCount(result.totalCount);
       setPageTotalAmount(result.totalAmount);
-      setPageOffset(offset);
     },
     [from, to],
   );
@@ -131,10 +126,10 @@ export function AnalyticsDashboard({
   const openLinesDrill = useCallback(
     (next: Extract<DrillState, { kind: "lines" }>) => {
       setDrill(next);
-      void loadLinesPage(next.field, next.value, 0);
+      void loadLines(next.field, next.value);
       scrollToDetail();
     },
-    [loadLinesPage],
+    [loadLines],
   );
 
   const openAllLines = useCallback(
@@ -195,7 +190,6 @@ export function AnalyticsDashboard({
     setPageLines([]);
     setPageTotalCount(0);
     setPageTotalAmount(0);
-    setPageOffset(0);
     setPageError(null);
   }, []);
 
@@ -327,18 +321,6 @@ export function AnalyticsDashboard({
             totalCount={pageTotalCount}
             loading={pageLoading}
             error={pageError}
-            pageOffset={pageOffset}
-            pageSize={SPEND_LINES_PAGE_SIZE}
-            onPrevPage={() => {
-              const next = Math.max(0, pageOffset - SPEND_LINES_PAGE_SIZE);
-              void loadLinesPage(drill.field, drill.value, next);
-            }}
-            onNextPage={() => {
-              const next = pageOffset + SPEND_LINES_PAGE_SIZE;
-              if (next < pageTotalCount) {
-                void loadLinesPage(drill.field, drill.value, next);
-              }
-            }}
             onClose={handleClose}
           />
         )}

@@ -20,10 +20,6 @@ type LinesProps = {
   totalCount?: number;
   loading?: boolean;
   error?: string | null;
-  pageOffset?: number;
-  pageSize?: number;
-  onPrevPage?: () => void;
-  onNextPage?: () => void;
   groups?: never;
   groupLabel?: never;
   onClose: () => void;
@@ -38,10 +34,6 @@ type GroupsProps = {
   totalCount?: never;
   loading?: never;
   error?: never;
-  pageOffset?: never;
-  pageSize?: never;
-  onPrevPage?: never;
-  onNextPage?: never;
   onClose: () => void;
 };
 
@@ -281,15 +273,6 @@ export function DetailSheet(props: Props) {
     ? `${formatVnd(totalAmount)} — ${props.groups!.length.toLocaleString("vi-VN")} nhóm`
     : `${formatVnd(totalAmount)} — ${lineCountLabel.toLocaleString("vi-VN")} dòng`;
 
-  const pageOffset = !isGroups ? (props.pageOffset ?? 0) : 0;
-  const pageSize = !isGroups ? (props.pageSize ?? 50) : 50;
-  const totalCount = !isGroups ? (props.totalCount ?? props.lines?.length ?? 0) : 0;
-  const showPaging =
-    !isGroups &&
-    typeof props.onPrevPage === "function" &&
-    typeof props.onNextPage === "function" &&
-    totalCount > pageSize;
-
   const virtualizeGroups =
     isGroups && sortedGroups.length >= VIRTUALIZE_MIN_ROWS;
   const virtualizeLines =
@@ -502,37 +485,6 @@ export function DetailSheet(props: Props) {
                   ))}
                 </tbody>
               </table>
-            )}
-            {showPaging && (
-              <div className="mt-4 flex items-center justify-between gap-2">
-                <p className="text-xs text-muted-foreground">
-                  {pageOffset + 1}–
-                  {Math.min(pageOffset + pageSize, totalCount)} /{" "}
-                  {totalCount.toLocaleString("vi-VN")}
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={pageOffset <= 0 || props.loading}
-                    onClick={props.onPrevPage}
-                  >
-                    Trước
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={
-                      pageOffset + pageSize >= totalCount || props.loading
-                    }
-                    onClick={props.onNextPage}
-                  >
-                    Sau
-                  </Button>
-                </div>
-              </div>
             )}
           </>
         )}

@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { SPEND_LINES_PAGE_SIZE } from "@/lib/spend/constants";
+import { SPEND_LINE_CHUNK } from "@/lib/spend/constants";
 import type { SpendAggregate } from "@/lib/spend/aggregations";
 
 export type SpendFilterKind = "all" | "plant_name" | "expense_code" | "month";
@@ -58,6 +58,27 @@ function mapAggregateRows(
     label: String(row.label),
     amount: Number(row.amount) || 0,
     count: Number(row.count) || 0,
+  }));
+}
+
+function mapLineRows(rows: Record<string, unknown>[]): AnalyticsLine[] {
+  return rows.map((line) => ({
+    id: String(line.id),
+    payment_date: stringOrNull(line.payment_date)?.slice(0, 10) ?? null,
+    party_code: stringOrNull(line.party_code),
+    party_name: stringOrNull(line.party_name),
+    item_code: stringOrNull(line.item_code),
+    item_name: stringOrNull(line.item_name),
+    uom: stringOrNull(line.uom),
+    qty: numberOrNull(line.qty),
+    unit_price: numberOrNull(line.unit_price),
+    amount: numberOrNull(line.amount),
+    plant_name: stringOrNull(line.plant_name),
+    expense_code: stringOrNull(line.expense_code),
+    payment_method: stringOrNull(line.payment_method),
+    description: stringOrNull(line.description),
+    invoice: stringOrNull(line.invoice),
+    note: stringOrNull(line.note),
   }));
 }
 
@@ -120,13 +141,12 @@ export async function fetchSpendAggregates(input: {
   };
 }
 
-export async function fetchSpendLinesPage(input: {
+/** Loads every matching spend line (chunked RPC calls). */
+export async function fetchSpendLines(input: {
   from: string;
   to: string;
   filterKind: SpendFilterKind;
   filterValue: string;
-  offset?: number;
-  limit?: number;
 }): Promise<
   { lines: AnalyticsLine[]; totalCount: number; totalAmount: number } | { error: string }
 > {
@@ -138,44 +158,39 @@ export async function fetchSpendLinesPage(input: {
     return { error: "Bạn cần đăng nhập." };
   }
 
-  const limit = input.limit ?? SPEND_LINES_PAGE_SIZE;
-  const offset = input.offset ?? 0;
+  const lines: AnalyticsLine[] = [];
+  let totalCount = 0;
+  let totalAmount = 0;
+  let offset = 0;
 
-  const { data, error } = await supabase.rpc("spend_lines_page", {
-    p_from: input.from,
-    p_to: input.to,
-    p_filter_kind: input.filterKind,
-    p_filter_value: input.filterValue,
-    p_limit: limit,
-    p_offset: offset,
-  });
+  for (;;) {
+    const { data, error } = await supabase.rpc("spend_lines_page", {
+      p_from: input.from,
+      p_to: input.to,
+      p_filter_kind: input.filterKind,
+      p_filter_value: input.filterValue,
+      p_limit: SPEND_LINE_CHUNK,
+      p_offset: offset,
+    });
 
-  if (error) {
-    return { error: "Không tải được dữ liệu." };
+    if (error) {
+      return { error: "Không tải được dữ liệu." };
+    }
+
+    const rows = (data ?? []) as Record<string, unknown>[];
+    if (rows.length === 0) {
+      break;
+    }
+
+    totalCount = Number(rows[0].total_count) || 0;
+    totalAmount = Number(rows[0].total_amount) || 0;
+    lines.push(...mapLineRows(rows));
+
+    if (lines.length >= totalCount || rows.length < SPEND_LINE_CHUNK) {
+      break;
+    }
+    offset += SPEND_LINE_CHUNK;
   }
-
-  const rows = data ?? [];
-  const totalCount = rows.length > 0 ? Number(rows[0].total_count) || 0 : 0;
-  const totalAmount = rows.length > 0 ? Number(rows[0].total_amount) || 0 : 0;
-
-  const lines: AnalyticsLine[] = rows.map((line: Record<string, unknown>) => ({
-    id: String(line.id),
-    payment_date: stringOrNull(line.payment_date)?.slice(0, 10) ?? null,
-    party_code: stringOrNull(line.party_code),
-    party_name: stringOrNull(line.party_name),
-    item_code: stringOrNull(line.item_code),
-    item_name: stringOrNull(line.item_name),
-    uom: stringOrNull(line.uom),
-    qty: numberOrNull(line.qty),
-    unit_price: numberOrNull(line.unit_price),
-    amount: numberOrNull(line.amount),
-    plant_name: stringOrNull(line.plant_name),
-    expense_code: stringOrNull(line.expense_code),
-    payment_method: stringOrNull(line.payment_method),
-    description: stringOrNull(line.description),
-    invoice: stringOrNull(line.invoice),
-    note: stringOrNull(line.note),
-  }));
 
   return { lines, totalCount, totalAmount };
 }
