@@ -61,8 +61,8 @@ src/components/spend/analytics-dashboard.tsx
 
 **Files:** `src/components/spend/analytics-dashboard.tsx`
 
-- [ ] Full-width “Chi theo đối tác” card + expand/drill
-- [ ] `handlePartyClick` → field `party`
+- [x] Full-width “Chi theo đối tác” card + expand/drill
+- [x] Party click → Hàng hóa summary + lines; item click filters lines
 
 ### Task 5: Verify
 

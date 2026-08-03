@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatPartyLabel, formatViDate, formatVnd } from "./format";
+import { formatItemLabel, formatPartyLabel, formatViDate, formatVnd } from "./format";
 
 const vndFormatter = new Intl.NumberFormat("vi-VN", {
   style: "currency",
@@ -43,5 +43,13 @@ describe("formatPartyLabel", () => {
     expect(formatPartyLabel(null, null)).toBeNull();
     expect(formatPartyLabel("", "")).toBeNull();
     expect(formatPartyLabel("  ", "  ")).toBeNull();
+  });
+});
+
+describe("formatItemLabel", () => {
+  it("matches party label rules for hàng hóa", () => {
+    expect(formatItemLabel("HH01", "Gạo")).toBe("HH01 — Gạo");
+    expect(formatItemLabel(null, "Gạo")).toBe("— — Gạo");
+    expect(formatItemLabel("", "")).toBeNull();
   });
 });

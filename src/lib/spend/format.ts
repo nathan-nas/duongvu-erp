@@ -16,13 +16,29 @@ export function formatViDate(iso: string | null): string {
   return `${day}/${month}/${year}`;
 }
 
+/** Composite code — name label (đối tác / hàng hóa). Must match SQL expressions. */
+export function formatCodeNameLabel(
+  code: string | null | undefined,
+  name: string | null | undefined,
+): string | null {
+  const trimmedCode = code?.trim() ?? "";
+  const trimmedName = name?.trim() ?? "";
+  if (trimmedCode === "" && trimmedName === "") return null;
+  return `${trimmedCode || "—"} — ${trimmedName || "—"}`;
+}
+
 /** Composite đối tác label — must match SQL spend_agg_by_party / spend_lines_page. */
 export function formatPartyLabel(
   partyCode: string | null | undefined,
   partyName: string | null | undefined,
 ): string | null {
-  const code = partyCode?.trim() ?? "";
-  const name = partyName?.trim() ?? "";
-  if (code === "" && name === "") return null;
-  return `${code || "—"} — ${name || "—"}`;
+  return formatCodeNameLabel(partyCode, partyName);
+}
+
+/** Composite hàng hóa label — must match SQL spend_agg_items_for_party. */
+export function formatItemLabel(
+  itemCode: string | null | undefined,
+  itemName: string | null | undefined,
+): string | null {
+  return formatCodeNameLabel(itemCode, itemName);
 }

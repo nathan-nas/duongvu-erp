@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import NumberFlow from "@number-flow/react";
 import { BarChart3, Maximize2, Minimize2 } from "lucide-react";
 import {
+  fetchPartyItemAggregates,
   fetchSpendLinesPage,
   type AnalyticsLine,
   type SpendFilterKind,
@@ -70,6 +71,14 @@ type DrillState =
       groupLabel: string;
       groups: SpendAggregate[];
       source: "kpi";
+    }
+  | {
+      kind: "party";
+      title: string;
+      partyLabel: string;
+      items: SpendAggregate[];
+      selectedItem: string | null;
+      source: "party";
     };
 
 export function AnalyticsDashboard({
@@ -102,7 +111,13 @@ export function AnalyticsDashboard({
   const hasRange = Boolean(from && to && !rangeError);
 
   const loadLines = useCallback(
-    async (field: SpendFilterKind, value: string, offset = 0, append = false) => {
+    async (
+      field: SpendFilterKind,
+      value: string,
+      offset = 0,
+      append = false,
+      itemLabel: string | null = null,
+    ) => {
       if (!from || !to) return;
       if (append) setPageLoadingMore(true);
       else {
@@ -114,6 +129,7 @@ export function AnalyticsDashboard({
         to,
         filterKind: field,
         filterValue: value,
+        itemLabel,
         offset,
         limit: SPEND_LINE_CHUNK,
       });
@@ -187,17 +203,51 @@ export function AnalyticsDashboard({
   );
 
   const handlePartyClick = useCallback(
-    (label: string) => {
-      openLinesDrill({
-        kind: "lines",
+    async (label: string) => {
+      if (!from || !to) return;
+      setPageError(null);
+      setPageLoading(true);
+      const [itemsResult] = await Promise.all([
+        fetchPartyItemAggregates({ from, to, partyLabel: label }),
+        loadLines("party", label, 0, false, null),
+      ]);
+      const items = "error" in itemsResult ? [] : itemsResult;
+      if ("error" in itemsResult) {
+        setPageError(itemsResult.error);
+      }
+      setDrill({
+        kind: "party",
         title: `Đối tác: ${label}`,
-        field: "party",
-        value: label,
+        partyLabel: label,
+        items,
+        selectedItem: null,
         source: "party",
       });
+      scrollToDetail();
     },
-    [openLinesDrill],
+    [from, to, loadLines],
   );
+
+  const handlePartyItemClick = useCallback(
+    (itemLabel: string) => {
+      setDrill((prev) => {
+        if (!prev || prev.kind !== "party") return prev;
+        const nextSelected =
+          prev.selectedItem === itemLabel ? null : itemLabel;
+        void loadLines("party", prev.partyLabel, 0, false, nextSelected);
+        return { ...prev, selectedItem: nextSelected };
+      });
+    },
+    [loadLines],
+  );
+
+  const clearPartyItemFilter = useCallback(() => {
+    setDrill((prev) => {
+      if (!prev || prev.kind !== "party") return prev;
+      void loadLines("party", prev.partyLabel, 0, false, null);
+      return { ...prev, selectedItem: null };
+    });
+  }, [loadLines]);
 
   const handleMonthClick = useCallback(
     (label: string) => {
@@ -332,7 +382,7 @@ export function AnalyticsDashboard({
   function renderDetail(source: DrillState["source"]) {
     if (!drill || drill.source !== source) return null;
     return (
-      <div id={DETAIL_ANCHOR_ID}>
+      <div id={DETAIL_ANCHOR_ID} className="flex flex-col gap-4">
         {drill.kind === "groups" ? (
           <DetailSheet
             title={drill.title}
@@ -341,6 +391,76 @@ export function AnalyticsDashboard({
             groupLabel={drill.groupLabel}
             onClose={handleClose}
           />
+        ) : drill.kind === "party" ? (
+          <>
+            <DetailSheet
+              title={`Hàng hóa — ${drill.partyLabel}`}
+              totalAmount={drill.items.reduce((s, g) => s + g.amount, 0)}
+              groups={drill.items}
+              groupLabel="Hàng hóa"
+              selectedGroupLabel={drill.selectedItem}
+              onGroupClick={handlePartyItemClick}
+              showClose={false}
+              onClose={handleClose}
+            />
+            {drill.selectedItem ? (
+              <div className="flex justify-start">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={clearPartyItemFilter}
+                >
+                  Tất cả hàng hóa
+                </Button>
+              </div>
+            ) : null}
+            <DetailSheet
+              title={
+                drill.selectedItem
+                  ? `Dòng chi — ${drill.selectedItem}`
+                  : drill.title
+              }
+              totalAmount={pageTotalAmount}
+              lines={pageLines}
+              totalCount={pageTotalCount}
+              loading={pageLoading}
+              error={pageError}
+              editable
+              onLinesChanged={() => {
+                void loadLines(
+                  "party",
+                  drill.partyLabel,
+                  0,
+                  false,
+                  drill.selectedItem,
+                );
+              }}
+              onClose={handleClose}
+            />
+            {pageLines.length < pageTotalCount && !pageLoading && !pageError ? (
+              <div className="flex justify-center pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={pageLoadingMore}
+                  onClick={() =>
+                    void loadLines(
+                      "party",
+                      drill.partyLabel,
+                      pageLines.length,
+                      true,
+                      drill.selectedItem,
+                    )
+                  }
+                >
+                  {pageLoadingMore
+                    ? "Đang tải thêm…"
+                    : `Tải thêm (${pageLines.length.toLocaleString("vi-VN")} / ${pageTotalCount.toLocaleString("vi-VN")})`}
+                </Button>
+              </div>
+            ) : null}
+          </>
         ) : (
           <>
             <DetailSheet

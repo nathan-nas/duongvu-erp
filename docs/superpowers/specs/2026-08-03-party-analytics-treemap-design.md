@@ -16,27 +16,27 @@ Add a third analytics treemap on **Phân tích** that groups spend by supplier/c
 ## Non-goals
 
 - KPI “Số đối tác”
-- Item-level rollup before lines
 - URL deep-link `?party=`
 - Master NCC / supplier table or org schema
 - Client-side aggregation of full date ranges
 
-## Identity
+## Drill-down (updated)
 
-Composite label (em dash separator), identical in agg RPC and page filter:
+Clicking a đối tác block opens:
 
-```text
-{party_code or —} — {party_name or —}
-```
+1. **Hàng hóa** summary table for that supplier (`spend_agg_items_for_party`)
+2. Paged spend **lines** for all items of that supplier
+3. Click a Hàng hóa row → lines filter to that item (`p_item_label`); **Tất cả hàng hóa** clears the filter
 
-Exclude rows where both code and name are null/blank. One side missing still forms a label (e.g. `N001 — —`).
+Item labels use the same composite pattern as đối tác (`mã — tên`).
 
 ## Architecture
 
 1. RPC `spend_agg_by_party(p_from, p_to, p_top)` → `(label, amount, count)`
-2. `spend_lines_page` filter kind `party` matches the same label expression
-3. RSC loads aggregates; dashboard shows full-width treemap between plant/expense row and monthly chart
-4. Click → `fetchSpendLinesPage` with `filterKind: "party"` → `DetailSheet` + **Tải thêm**
+2. RPC `spend_agg_items_for_party(p_from, p_to, p_party_label)` → item rollup
+3. `spend_lines_page` filter kind `party` (+ optional `p_item_label`)
+4. RSC loads party aggregates; dashboard shows full-width treemap between plant/expense row and monthly chart
+5. Party click → item table + lines; item click → filtered lines
 
 ## Security
 
