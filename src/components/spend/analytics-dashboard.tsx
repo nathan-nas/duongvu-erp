@@ -48,12 +48,13 @@ type AnalyticsDashboardProps = {
   amountSum: number;
   plantData: SpendAggregate[];
   expenseData: SpendAggregate[];
+  partyData: SpendAggregate[];
   monthData: SpendAggregate[];
   plantAll: SpendAggregate[];
   expenseAll: SpendAggregate[];
 };
 
-type ExpandedCard = "plant" | "expense" | "month" | null;
+type ExpandedCard = "plant" | "expense" | "party" | "month" | null;
 
 type DrillState =
   | {
@@ -80,6 +81,7 @@ export function AnalyticsDashboard({
   amountSum,
   plantData,
   expenseData,
+  partyData,
   monthData,
   plantAll,
   expenseAll,
@@ -179,6 +181,19 @@ export function AnalyticsDashboard({
         field: "expense_code",
         value: label,
         source: "expense",
+      });
+    },
+    [openLinesDrill],
+  );
+
+  const handlePartyClick = useCallback(
+    (label: string) => {
+      openLinesDrill({
+        kind: "lines",
+        title: `Đối tác: ${label}`,
+        field: "party",
+        value: label,
+        source: "party",
       });
     },
     [openLinesDrill],
@@ -311,6 +326,7 @@ export function AnalyticsDashboard({
 
   const showPlant = expanded === null || expanded === "plant";
   const showExpense = expanded === null || expanded === "expense";
+  const showParty = expanded === null || expanded === "party";
   const showMonth = expanded === null || expanded === "month";
 
   function renderDetail(source: DrillState["source"]) {
@@ -514,6 +530,47 @@ export function AnalyticsDashboard({
 
           {renderDetail("plant")}
           {renderDetail("expense")}
+
+          {showParty && (
+            <Card
+              className="pressable-card cursor-pointer shadow-sm"
+              onClick={() => openAllLines("party", "Chi theo đối tác")}
+            >
+              <CardHeader className="flex flex-row items-start justify-between">
+                <div>
+                  <CardTitle className="text-base">
+                    Chi theo đối tác (ĐT)
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    Nhấn biểu đồ để lọc chi tiết
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleExpand("party", "Chi theo đối tác");
+                  }}
+                  aria-label={expanded === "party" ? "Thu nhỏ" : "Phóng to"}
+                >
+                  {expanded === "party" ? (
+                    <Minimize2 className="size-4" />
+                  ) : (
+                    <Maximize2 className="size-4" />
+                  )}
+                </Button>
+              </CardHeader>
+              <CardContent onClick={(e) => e.stopPropagation()}>
+                <SpendTreemap
+                  data={partyData}
+                  onClickBlock={handlePartyClick}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {renderDetail("party")}
 
           {showMonth && (
             <Card

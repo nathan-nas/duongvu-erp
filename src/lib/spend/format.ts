@@ -15,3 +15,14 @@ export function formatViDate(iso: string | null): string {
   const [, year, month, day] = match;
   return `${day}/${month}/${year}`;
 }
+
+/** Composite đối tác label — must match SQL spend_agg_by_party / spend_lines_page. */
+export function formatPartyLabel(
+  partyCode: string | null | undefined,
+  partyName: string | null | undefined,
+): string | null {
+  const code = partyCode?.trim() ?? "";
+  const name = partyName?.trim() ?? "";
+  if (code === "" && name === "") return null;
+  return `${code || "—"} — ${name || "—"}`;
+}

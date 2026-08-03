@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatViDate, formatVnd } from "./format";
+import { formatPartyLabel, formatViDate, formatVnd } from "./format";
 
 const vndFormatter = new Intl.NumberFormat("vi-VN", {
   style: "currency",
@@ -25,5 +25,23 @@ describe("formatViDate", () => {
     expect(formatViDate(null)).toBe("—");
     expect(formatViDate("")).toBe("—");
     expect(formatViDate("not-a-date")).toBe("—");
+  });
+});
+
+describe("formatPartyLabel", () => {
+  it("joins code and name with em dash", () => {
+    expect(formatPartyLabel("N001", "Công ty X")).toBe("N001 — Công ty X");
+  });
+
+  it("uses em dash placeholder when one side is missing", () => {
+    expect(formatPartyLabel("N001", null)).toBe("N001 — —");
+    expect(formatPartyLabel(null, "Công ty X")).toBe("— — Công ty X");
+    expect(formatPartyLabel("  ", "Công ty X")).toBe("— — Công ty X");
+  });
+
+  it("returns null when both sides are blank", () => {
+    expect(formatPartyLabel(null, null)).toBeNull();
+    expect(formatPartyLabel("", "")).toBeNull();
+    expect(formatPartyLabel("  ", "  ")).toBeNull();
   });
 });

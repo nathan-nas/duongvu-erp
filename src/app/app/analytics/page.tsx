@@ -13,6 +13,7 @@ type AnalyticsPageProps = {
 const emptySeries = {
   plant: [] as SpendAggregate[],
   expense: [] as SpendAggregate[],
+  party: [] as SpendAggregate[],
   month: [] as SpendAggregate[],
   plantAll: [] as SpendAggregate[],
   expenseAll: [] as SpendAggregate[],
@@ -53,6 +54,7 @@ export default async function AnalyticsPage({
         amountSum={series.totals.amountSum}
         plantData={series.plant}
         expenseData={series.expense}
+        partyData={series.party}
         monthData={series.month}
         plantAll={series.plantAll}
         expenseAll={series.expenseAll}

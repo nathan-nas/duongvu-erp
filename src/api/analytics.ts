@@ -4,7 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { SPEND_LINE_CHUNK } from "@/lib/spend/constants";
 import type { SpendAggregate } from "@/lib/spend/aggregations";
 
-export type SpendFilterKind = "all" | "plant_name" | "expense_code" | "month";
+export type SpendFilterKind =
+  | "all"
+  | "plant_name"
+  | "expense_code"
+  | "month"
+  | "party";
 
 export type AnalyticsLine = {
   id: string;
@@ -103,6 +108,7 @@ export async function fetchSpendAggregates(input: {
 }): Promise<{
   plant: SpendAggregate[];
   expense: SpendAggregate[];
+  party: SpendAggregate[];
   month: SpendAggregate[];
   plantAll: SpendAggregate[];
   expenseAll: SpendAggregate[];
@@ -116,10 +122,11 @@ export async function fetchSpendAggregates(input: {
 
   const params = { p_from: input.from, p_to: input.to };
 
-  const [plantTop, expenseTop, month, plantAll, expenseAll, totals] =
+  const [plantTop, expenseTop, partyTop, month, plantAll, expenseAll, totals] =
     await Promise.all([
       supabase.rpc("spend_agg_by_plant", { ...params, p_top: 15 }),
       supabase.rpc("spend_agg_by_expense", { ...params, p_top: 15 }),
+      supabase.rpc("spend_agg_by_party", { ...params, p_top: 15 }),
       supabase.rpc("spend_agg_by_month", params),
       supabase.rpc("spend_agg_by_plant", { ...params, p_top: null }),
       supabase.rpc("spend_agg_by_expense", { ...params, p_top: null }),
@@ -131,6 +138,7 @@ export async function fetchSpendAggregates(input: {
   return {
     plant: mapAggregateRows(plantTop.data),
     expense: mapAggregateRows(expenseTop.data),
+    party: mapAggregateRows(partyTop.data),
     month: mapAggregateRows(month.data),
     plantAll: mapAggregateRows(plantAll.data),
     expenseAll: mapAggregateRows(expenseAll.data),
