@@ -39,8 +39,8 @@ type GroupsProps = {
   groupLabel: string;
   lines?: never;
   totalCount?: never;
-  loading?: never;
-  error?: never;
+  loading?: boolean;
+  error?: string | null;
   editable?: never;
   showClose?: boolean;
   onLinesChanged?: never;
@@ -461,6 +461,14 @@ export function DetailSheet(props: Props) {
           </p>
         )}
         {!isGroups && props.error && (
+          <p className="mb-3 text-sm text-destructive">{props.error}</p>
+        )}
+        {isGroups && props.loading && (
+          <p className="mb-3 text-sm text-muted-foreground" aria-live="polite">
+            Đang tải…
+          </p>
+        )}
+        {isGroups && props.error && (
           <p className="mb-3 text-sm text-destructive">{props.error}</p>
         )}
         {isGroups ? (

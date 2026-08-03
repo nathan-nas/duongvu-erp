@@ -47,9 +47,17 @@ describe("formatPartyLabel", () => {
 });
 
 describe("formatItemLabel", () => {
-  it("matches party label rules for hàng hóa", () => {
+  it("joins mã and tên when both are present", () => {
     expect(formatItemLabel("HH01", "Gạo")).toBe("HH01 — Gạo");
-    expect(formatItemLabel(null, "Gạo")).toBe("— — Gạo");
+  });
+
+  it("shows only the present side when the other is blank", () => {
+    expect(formatItemLabel(null, "Gạo")).toBe("Gạo");
+    expect(formatItemLabel("HH01", null)).toBe("HH01");
+    expect(formatItemLabel("  ", "ỐC GÀO")).toBe("ỐC GÀO");
+  });
+
+  it("returns null when both sides are blank", () => {
     expect(formatItemLabel("", "")).toBeNull();
   });
 });

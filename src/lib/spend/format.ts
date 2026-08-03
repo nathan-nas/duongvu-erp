@@ -35,10 +35,17 @@ export function formatPartyLabel(
   return formatCodeNameLabel(partyCode, partyName);
 }
 
-/** Composite hàng hóa label — must match SQL spend_agg_items_for_party. */
+/**
+ * Hàng hóa label — must match SQL spend_item_label / spend_agg_items_for_party.
+ * Both sides: `mã — tên`. Only one side: that value alone (no `— — ` placeholder).
+ */
 export function formatItemLabel(
   itemCode: string | null | undefined,
   itemName: string | null | undefined,
 ): string | null {
-  return formatCodeNameLabel(itemCode, itemName);
+  const code = itemCode?.trim() ?? "";
+  const name = itemName?.trim() ?? "";
+  if (code === "" && name === "") return null;
+  if (code !== "" && name !== "") return `${code} — ${name}`;
+  return code || name;
 }

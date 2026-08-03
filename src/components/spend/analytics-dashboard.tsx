@@ -30,6 +30,10 @@ import { cn } from "@/lib/utils";
 
 const DETAIL_ANCHOR_ID = "spend-detail-panel";
 
+/** Invalidates in-flight party/lines loads when a newer request starts. */
+let linesRequestSeq = 0;
+let partyItemsRequestSeq = 0;
+
 function scrollToDetail() {
   setTimeout(() => {
     document
@@ -77,6 +81,8 @@ type DrillState =
       title: string;
       partyLabel: string;
       items: SpendAggregate[];
+      itemsError: string | null;
+      itemsLoading: boolean;
       selectedItem: string | null;
       source: "party";
     };
@@ -119,6 +125,7 @@ export function AnalyticsDashboard({
       itemLabel: string | null = null,
     ) => {
       if (!from || !to) return;
+      const requestId = append ? linesRequestSeq : ++linesRequestSeq;
       if (append) setPageLoadingMore(true);
       else {
         setPageLoading(true);
@@ -133,6 +140,7 @@ export function AnalyticsDashboard({
         offset,
         limit: SPEND_LINE_CHUNK,
       });
+      if (requestId !== linesRequestSeq) return;
       if (append) setPageLoadingMore(false);
       else setPageLoading(false);
       if ("error" in result) {
@@ -205,27 +213,74 @@ export function AnalyticsDashboard({
   const handlePartyClick = useCallback(
     async (label: string) => {
       if (!from || !to) return;
+      const itemsRequestId = ++partyItemsRequestSeq;
       setPageError(null);
-      setPageLoading(true);
-      const [itemsResult] = await Promise.all([
-        fetchPartyItemAggregates({ from, to, partyLabel: label }),
-        loadLines("party", label, 0, false, null),
-      ]);
-      const items = "error" in itemsResult ? [] : itemsResult;
-      if ("error" in itemsResult) {
-        setPageError(itemsResult.error);
-      }
+      setPageLines([]);
+      setPageTotalCount(0);
+      setPageTotalAmount(0);
       setDrill({
         kind: "party",
         title: `Đối tác: ${label}`,
         partyLabel: label,
-        items,
+        items: [],
+        itemsError: null,
+        itemsLoading: true,
         selectedItem: null,
         source: "party",
       });
       scrollToDetail();
+
+      const [itemsResult] = await Promise.all([
+        fetchPartyItemAggregates({ from, to, partyLabel: label }),
+        loadLines("party", label, 0, false, null),
+      ]);
+
+      if (itemsRequestId !== partyItemsRequestSeq) return;
+
+      setDrill((prev) => {
+        if (!prev || prev.kind !== "party" || prev.partyLabel !== label) {
+          return prev;
+        }
+        if ("error" in itemsResult) {
+          return {
+            ...prev,
+            items: [],
+            itemsError: itemsResult.error,
+            itemsLoading: false,
+          };
+        }
+        return {
+          ...prev,
+          items: itemsResult,
+          itemsError: null,
+          itemsLoading: false,
+        };
+      });
     },
     [from, to, loadLines],
+  );
+
+  const refreshPartyItems = useCallback(
+    async (partyLabel: string) => {
+      if (!from || !to) return;
+      const itemsRequestId = ++partyItemsRequestSeq;
+      const itemsResult = await fetchPartyItemAggregates({
+        from,
+        to,
+        partyLabel,
+      });
+      if (itemsRequestId !== partyItemsRequestSeq) return;
+      setDrill((prev) => {
+        if (!prev || prev.kind !== "party" || prev.partyLabel !== partyLabel) {
+          return prev;
+        }
+        if ("error" in itemsResult) {
+          return { ...prev, itemsError: itemsResult.error };
+        }
+        return { ...prev, items: itemsResult, itemsError: null };
+      });
+    },
+    [from, to],
   );
 
   const handlePartyItemClick = useCallback(
@@ -263,6 +318,8 @@ export function AnalyticsDashboard({
   );
 
   const handleClose = useCallback(() => {
+    linesRequestSeq += 1;
+    partyItemsRequestSeq += 1;
     setDrill(null);
     setPageLines([]);
     setPageTotalCount(0);
@@ -400,6 +457,8 @@ export function AnalyticsDashboard({
               groupLabel="Hàng hóa"
               selectedGroupLabel={drill.selectedItem}
               onGroupClick={handlePartyItemClick}
+              loading={drill.itemsLoading}
+              error={drill.itemsError}
               showClose={false}
               onClose={handleClose}
             />
@@ -435,6 +494,7 @@ export function AnalyticsDashboard({
                   false,
                   drill.selectedItem,
                 );
+                void refreshPartyItems(drill.partyLabel);
               }}
               onClose={handleClose}
             />
