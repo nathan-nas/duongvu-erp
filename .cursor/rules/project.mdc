@@ -8,6 +8,7 @@ alwaysApply: true
 - Stack: Next.js App Router, TypeScript, Tailwind, shadcn/ui, Zustand (UI only), Supabase, Recharts, Vercel-only deploy.
 - Brand: "Dương Vũ". Assets in `public/brand/`. Theme: navy + blue (`globals.css`); display font `font-display` (Josefin). Commercial ref: duongvuvn.com. All UI text in Vietnamese. Dark mode supported.
 - Agents follow AGENTS.md: design → plan → implement → `pnpm lint && pnpm typecheck && pnpm test`.
+- Git commits for deploy: author/committer `nathan-nas <77968170+nathan-nas@users.noreply.github.com>` (env vars per commit; see AGENTS.md). Unverified emails block Vercel AnhNG previews.
 - No org/business schema until product is defined. Tables: `auth.users`, `import_batch`, `spend_line`.
 - No service-role keys in client or `NEXT_PUBLIC_*` env vars.
 - Prefer surgical diffs; no speculative abstractions or extra features.
