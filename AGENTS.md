@@ -56,6 +56,30 @@ You are a primary contributor to this repository. Humans review; agents implemen
 5. Ensure `pnpm lint`, `pnpm typecheck`, and `pnpm test` pass (CI must pass).
 6. Prefer a PR so Vercel preview validates the deploy.
 
+## Git commits (Vercel / AnhNG team)
+
+Vercel Deployment Protection requires every commit author to map to a **verified GitHub account** on the team. Unlinked emails (e.g. work mailbox not on GitHub) block PR previews with “GitHub couldn’t verify an account for the commit.”
+
+**Always** author and committer as GitHub user `nathan-nas` using the noreply address — **do not** use `huan@netcompany.com` or other unverified emails. Prefer per-command env vars (do **not** change global `git config` unless the human asks):
+
+```bash
+GIT_AUTHOR_NAME="nathan-nas"
+GIT_AUTHOR_EMAIL="77968170+nathan-nas@users.noreply.github.com"
+GIT_COMMITTER_NAME="nathan-nas"
+GIT_COMMITTER_EMAIL="77968170+nathan-nas@users.noreply.github.com"
+```
+
+PowerShell example before `git commit`:
+
+```powershell
+$env:GIT_AUTHOR_NAME = "nathan-nas"
+$env:GIT_AUTHOR_EMAIL = "77968170+nathan-nas@users.noreply.github.com"
+$env:GIT_COMMITTER_NAME = "nathan-nas"
+$env:GIT_COMMITTER_EMAIL = "77968170+nathan-nas@users.noreply.github.com"
+```
+
+After commit, confirm with `git log -1 --format="%an <%ae>"` that the noreply email was used.
+
 ## Project skills
 
 Follow skills in `.cursor/skills/` when relevant:

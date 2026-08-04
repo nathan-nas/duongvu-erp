@@ -4,7 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { SPEND_LINE_CHUNK } from "@/lib/spend/constants";
 import type { SpendAggregate } from "@/lib/spend/aggregations";
 
-export type SpendFilterKind = "all" | "plant_name" | "expense_code" | "month";
+export type SpendFilterKind =
+  | "all"
+  | "plant_name"
+  | "expense_code"
+  | "month"
+  | "party";
 
 export type AnalyticsLine = {
   id: string;
@@ -103,6 +108,7 @@ export async function fetchSpendAggregates(input: {
 }): Promise<{
   plant: SpendAggregate[];
   expense: SpendAggregate[];
+  party: SpendAggregate[];
   month: SpendAggregate[];
   plantAll: SpendAggregate[];
   expenseAll: SpendAggregate[];
@@ -116,10 +122,11 @@ export async function fetchSpendAggregates(input: {
 
   const params = { p_from: input.from, p_to: input.to };
 
-  const [plantTop, expenseTop, month, plantAll, expenseAll, totals] =
+  const [plantTop, expenseTop, partyTop, month, plantAll, expenseAll, totals] =
     await Promise.all([
       supabase.rpc("spend_agg_by_plant", { ...params, p_top: 15 }),
       supabase.rpc("spend_agg_by_expense", { ...params, p_top: 15 }),
+      supabase.rpc("spend_agg_by_party", { ...params, p_top: 15 }),
       supabase.rpc("spend_agg_by_month", params),
       supabase.rpc("spend_agg_by_plant", { ...params, p_top: null }),
       supabase.rpc("spend_agg_by_expense", { ...params, p_top: null }),
@@ -131,6 +138,7 @@ export async function fetchSpendAggregates(input: {
   return {
     plant: mapAggregateRows(plantTop.data),
     expense: mapAggregateRows(expenseTop.data),
+    party: mapAggregateRows(partyTop.data),
     month: mapAggregateRows(month.data),
     plantAll: mapAggregateRows(plantAll.data),
     expenseAll: mapAggregateRows(expenseAll.data),
@@ -147,6 +155,7 @@ export async function fetchSpendLinesPage(input: {
   to: string;
   filterKind: SpendFilterKind;
   filterValue: string;
+  itemLabel?: string | null;
   offset?: number;
   limit?: number;
 }): Promise<
@@ -170,6 +179,7 @@ export async function fetchSpendLinesPage(input: {
     p_filter_value: input.filterValue,
     p_limit: limit,
     p_offset: offset,
+    p_item_label: input.itemLabel ?? null,
   });
 
   if (error) {
@@ -186,6 +196,36 @@ export async function fetchSpendLinesPage(input: {
   return { lines: mapLineRows(rows), totalCount, totalAmount };
 }
 
+/** Item aggregates for one đối tác within a date range. */
+export async function fetchPartyItemAggregates(input: {
+  from: string;
+  to: string;
+  partyLabel: string;
+}): Promise<SpendAggregate[] | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "Bạn cần đăng nhập." };
+  }
+
+  const { data, error } = await supabase.rpc("spend_agg_items_for_party", {
+    p_from: input.from,
+    p_to: input.to,
+    p_party_label: input.partyLabel,
+  });
+
+  if (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("spend_agg_items_for_party", error);
+    }
+    return { error: "Không tải được dữ liệu." };
+  }
+
+  return mapAggregateRows(data);
+}
+
 /**
  * Loads matching spend lines in chunks.
  * Caps auto-load so full-year dumps (~80k) do not time out the server action.
@@ -195,6 +235,7 @@ export async function fetchSpendLines(input: {
   to: string;
   filterKind: SpendFilterKind;
   filterValue: string;
+  itemLabel?: string | null;
   maxRows?: number;
 }): Promise<
   | {

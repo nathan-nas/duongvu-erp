@@ -40,3 +40,4 @@ In Supabase Auth URL config, allow:
 1. Confirm no non-Vercel deploy artifacts.
 2. Confirm env vars documented in README / `.env.example`.
 3. After PR, verify Vercel preview build succeeds.
+4. **Commit author:** every push that should deploy must use GitHub noreply `nathan-nas <77968170+nathan-nas@users.noreply.github.com>` (see `AGENTS.md` → Git commits). Unverified emails fail AnhNG team Deployment Protection before the build runs.

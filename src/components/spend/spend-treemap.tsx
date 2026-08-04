@@ -10,6 +10,23 @@ const COLORS = [
   "#059669", "#4f46e5", "#c026d3", "#0891b2", "#dc2626",
 ];
 
+const PARTY_SEP = " — ";
+
+/** Prefer mã when composite labels are too long for the cell; full name stays in tooltip. */
+export function truncateTreemapLabel(name: string, maxChars: number): string {
+  if (maxChars < 1) return "…";
+  if (name.length <= maxChars) return name;
+
+  const sepIdx = name.indexOf(PARTY_SEP);
+  if (sepIdx > 0) {
+    const code = name.slice(0, sepIdx);
+    if (code.length <= maxChars) return code;
+    return `${code.slice(0, Math.max(1, maxChars - 1))}…`;
+  }
+
+  return `${name.slice(0, Math.max(1, maxChars - 1))}…`;
+}
+
 type TreemapContentProps = {
   x?: number;
   y?: number;
@@ -24,6 +41,7 @@ function CustomContent({ x = 0, y = 0, width = 0, height = 0, index = 0, name, a
   if (width < 4 || height < 4) return null;
   const color = COLORS[index % COLORS.length];
   const showLabel = width > 50 && height > 30;
+  const maxChars = Math.max(1, Math.floor(width / 7));
 
   return (
     <g>
@@ -36,7 +54,7 @@ function CustomContent({ x = 0, y = 0, width = 0, height = 0, index = 0, name, a
         stroke="#fff"
         strokeWidth={2}
         rx={4}
-        className="cursor-pointer transition-opacity hover:opacity-80"
+        className="treemap-cell cursor-pointer"
       />
       {showLabel && (
         <>
@@ -48,9 +66,7 @@ function CustomContent({ x = 0, y = 0, width = 0, height = 0, index = 0, name, a
             fontSize={Math.min(12, width / 8)}
             fontWeight={600}
           >
-            {(name ?? "").length > width / 7
-              ? (name ?? "").slice(0, Math.floor(width / 7)) + "…"
-              : name}
+            {truncateTreemapLabel(name ?? "", maxChars)}
           </text>
           {height > 50 && (
             <text

@@ -27,6 +27,8 @@ type LinesProps = {
   onLinesChanged?: () => void;
   groups?: never;
   groupLabel?: never;
+  onGroupClick?: never;
+  selectedGroupLabel?: never;
   onClose: () => void;
 };
 
@@ -37,11 +39,13 @@ type GroupsProps = {
   groupLabel: string;
   lines?: never;
   totalCount?: never;
-  loading?: never;
-  error?: never;
+  loading?: boolean;
+  error?: string | null;
   editable?: never;
   showClose?: boolean;
   onLinesChanged?: never;
+  onGroupClick?: (label: string) => void;
+  selectedGroupLabel?: string | null;
   onClose: () => void;
 };
 
@@ -212,6 +216,8 @@ export function DetailSheet(props: Props) {
   const { title, totalAmount, onClose } = props;
   const isGroups = "groups" in props && props.groups != null;
   const editable = !isGroups && props.editable !== false;
+  const onGroupClick = isGroups ? props.onGroupClick : undefined;
+  const selectedGroupLabel = isGroups ? props.selectedGroupLabel : null;
   const showClose = props.showClose !== false;
 
   const [lineSortKey, setLineSortKey] = useState<LineSortKey | null>(null);
@@ -457,6 +463,14 @@ export function DetailSheet(props: Props) {
         {!isGroups && props.error && (
           <p className="mb-3 text-sm text-destructive">{props.error}</p>
         )}
+        {isGroups && props.loading && (
+          <p className="mb-3 text-sm text-muted-foreground" aria-live="polite">
+            Đang tải…
+          </p>
+        )}
+        {isGroups && props.error && (
+          <p className="mb-3 text-sm text-destructive">{props.error}</p>
+        )}
         {isGroups ? (
           virtualizeGroups ? (
             <TableVirtuoso
@@ -491,9 +505,31 @@ export function DetailSheet(props: Props) {
                     className="border-b bg-muted/90 backdrop-blur"
                   />
                 ),
-                TableRow: (rowProps) => (
-                  <tr {...rowProps} className="hover:bg-muted/30" />
-                ),
+                TableRow: (rowProps) => {
+                  const index = Number(
+                    (rowProps as { "data-index"?: number })["data-index"],
+                  );
+                  const group = Number.isFinite(index)
+                    ? sortedGroups[index]
+                    : undefined;
+                  const selected =
+                    group != null && selectedGroupLabel === group.label;
+                  return (
+                    <tr
+                      {...rowProps}
+                      className={cn(
+                        "hover:bg-muted/30",
+                        onGroupClick && "cursor-pointer",
+                        selected && "bg-primary/10",
+                      )}
+                      onClick={
+                        onGroupClick && group
+                          ? () => onGroupClick(group.label)
+                          : undefined
+                      }
+                    />
+                  );
+                },
               }}
             />
           ) : (
@@ -502,19 +538,34 @@ export function DetailSheet(props: Props) {
                 {groupHeader}
               </thead>
               <tbody className="divide-y">
-                {sortedGroups.map((group) => (
-                  <tr key={group.label} className="hover:bg-muted/30">
-                    <td className="px-4 py-2.5 text-xs font-medium">
-                      {group.label}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums">
-                      {group.count.toLocaleString("vi-VN")}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums font-semibold">
-                      {formatVnd(group.amount)}
-                    </td>
-                  </tr>
-                ))}
+                {sortedGroups.map((group) => {
+                  const selected = selectedGroupLabel === group.label;
+                  return (
+                    <tr
+                      key={group.label}
+                      className={cn(
+                        "hover:bg-muted/30",
+                        onGroupClick && "cursor-pointer",
+                        selected && "bg-primary/10",
+                      )}
+                      onClick={
+                        onGroupClick
+                          ? () => onGroupClick(group.label)
+                          : undefined
+                      }
+                    >
+                      <td className="px-4 py-2.5 text-xs font-medium">
+                        {group.label}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums">
+                        {group.count.toLocaleString("vi-VN")}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums font-semibold">
+                        {formatVnd(group.amount)}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )

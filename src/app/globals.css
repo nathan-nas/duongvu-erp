@@ -145,6 +145,14 @@
       box-shadow: 0 0 0 2px color-mix(in oklch, var(--primary) 30%, transparent);
     }
   }
+  .treemap-cell {
+    transition: opacity 140ms var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .treemap-cell:hover {
+      opacity: 0.8;
+    }
+  }
   .motion-enter {
     animation: motion-enter 200ms var(--ease-out) both;
   }
@@ -182,6 +190,7 @@
 @media (prefers-reduced-motion: reduce) {
   .motion-press,
   .pressable-card,
+  .treemap-cell,
   .motion-sidebar,
   .motion-overlay,
   .motion-enter,
