@@ -8,6 +8,11 @@ import { Button } from "@/components/ui/button";
 import type { AnalyticsLine } from "@/api/analytics";
 import type { SpendAggregate } from "@/lib/spend/aggregations";
 import { formatVnd, formatViDate } from "@/lib/spend/format";
+import {
+  SPEND_LINE_COLUMNS,
+  type SpendLineColumnKey,
+  type SpendLineSortKey,
+} from "@/lib/spend/line-table-columns";
 import { cn } from "@/lib/utils";
 import { SpendLineDeleteDialog } from "./spend-line-delete-dialog";
 import { SpendLineFormDialog } from "./spend-line-form-dialog";
@@ -51,33 +56,18 @@ type GroupsProps = {
 
 type Props = LinesProps | GroupsProps;
 
-type LineSortKey =
-  | "payment_date"
-  | "party_name"
-  | "item_name"
-  | "qty"
-  | "unit_price"
-  | "amount"
-  | "plant_name"
-  | "expense_code";
-
 type GroupSortKey = "label" | "amount" | "count";
 type SortDir = "asc" | "desc";
 
-const lineColumns: { key: LineSortKey; label: string; align?: "right" }[] = [
-  { key: "payment_date", label: "Ngày" },
-  { key: "party_name", label: "Cửa hàng" },
-  { key: "item_name", label: "Hàng hóa" },
-  { key: "qty", label: "SL", align: "right" },
-  { key: "unit_price", label: "Đơn giá", align: "right" },
-  { key: "amount", label: "Thành tiền", align: "right" },
-  { key: "plant_name", label: "NM" },
-  { key: "expense_code", label: "Mã chi" },
-];
+const DEFAULT_VISIBLE = new Set<SpendLineColumnKey>(
+  SPEND_LINE_COLUMNS.map((column) => column.key),
+);
 
-const DEFAULT_VISIBLE = new Set<LineSortKey>(lineColumns.map((c) => c.key));
-
-function compareLine(a: AnalyticsLine, b: AnalyticsLine, key: LineSortKey): number {
+function compareLine(
+  a: AnalyticsLine,
+  b: AnalyticsLine,
+  key: SpendLineSortKey,
+): number {
   const av = a[key];
   const bv = b[key];
   if (av == null && bv == null) return 0;
@@ -122,8 +112,21 @@ function SortButton({
   );
 }
 
-function renderLineCell(line: AnalyticsLine, key: LineSortKey) {
+function renderLineCell(
+  line: AnalyticsLine,
+  key: SpendLineColumnKey,
+  rowNumber: number,
+) {
   switch (key) {
+    case "row_number":
+      return (
+        <td
+          key={key}
+          className="whitespace-nowrap px-4 py-2.5 text-right text-xs tabular-nums"
+        >
+          {rowNumber.toLocaleString("vi-VN")}
+        </td>
+      );
     case "payment_date":
       return (
         <td key={key} className="whitespace-nowrap px-4 py-2.5 text-xs">
@@ -138,11 +141,12 @@ function renderLineCell(line: AnalyticsLine, key: LineSortKey) {
           title={line.party_name ?? undefined}
         >
           <div className="font-medium">{line.party_name ?? "—"}</div>
-          {line.party_code && (
-            <div className="text-[10px] text-muted-foreground">
-              {line.party_code}
-            </div>
-          )}
+        </td>
+      );
+    case "received_date":
+      return (
+        <td key={key} className="whitespace-nowrap px-4 py-2.5 text-xs">
+          {line.received_date ? formatViDate(line.received_date) : "—"}
         </td>
       );
     case "item_name":
@@ -153,9 +157,12 @@ function renderLineCell(line: AnalyticsLine, key: LineSortKey) {
           title={line.item_name ?? undefined}
         >
           <div>{line.item_name ?? "—"}</div>
-          {line.uom && (
-            <div className="text-[10px] text-muted-foreground">{line.uom}</div>
-          )}
+        </td>
+      );
+    case "uom":
+      return (
+        <td key={key} className="whitespace-nowrap px-4 py-2.5 text-xs">
+          {line.uom ?? "—"}
         </td>
       );
     case "qty":
@@ -185,6 +192,26 @@ function renderLineCell(line: AnalyticsLine, key: LineSortKey) {
           {line.amount != null ? formatVnd(line.amount) : "—"}
         </td>
       );
+    case "description":
+      return (
+        <td
+          key={key}
+          className="max-w-[260px] truncate px-4 py-2.5 text-xs"
+          title={line.description ?? undefined}
+        >
+          {line.description ?? "—"}
+        </td>
+      );
+    case "recipient_name":
+      return (
+        <td
+          key={key}
+          className="max-w-[180px] truncate px-4 py-2.5 text-xs"
+          title={line.recipient_name ?? undefined}
+        >
+          {line.recipient_name ?? "—"}
+        </td>
+      );
     case "plant_name":
       return (
         <td key={key} className="whitespace-nowrap px-4 py-2.5">
@@ -197,16 +224,10 @@ function renderLineCell(line: AnalyticsLine, key: LineSortKey) {
           )}
         </td>
       );
-    case "expense_code":
+    case "invoice":
       return (
-        <td key={key} className="whitespace-nowrap px-4 py-2.5">
-          {line.expense_code ? (
-            <span className="inline-flex rounded-md bg-muted px-2 py-0.5 text-[10px] font-medium">
-              {line.expense_code}
-            </span>
-          ) : (
-            "—"
-          )}
+        <td key={key} className="whitespace-nowrap px-4 py-2.5 text-xs">
+          {line.invoice ?? "—"}
         </td>
       );
   }
@@ -220,10 +241,10 @@ export function DetailSheet(props: Props) {
   const selectedGroupLabel = isGroups ? props.selectedGroupLabel : null;
   const showClose = props.showClose !== false;
 
-  const [lineSortKey, setLineSortKey] = useState<LineSortKey | null>(null);
+  const [lineSortKey, setLineSortKey] = useState<SpendLineSortKey | null>(null);
   const [groupSortKey, setGroupSortKey] = useState<GroupSortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
-  const [visibleKeys, setVisibleKeys] = useState<Set<LineSortKey>>(
+  const [visibleKeys, setVisibleKeys] = useState<Set<SpendLineColumnKey>>(
     () => new Set(DEFAULT_VISIBLE),
   );
   const [columnPickerOpen, setColumnPickerOpen] = useState(false);
@@ -235,7 +256,7 @@ export function DetailSheet(props: Props) {
   const [deleteLine, setDeleteLine] = useState<AnalyticsLine | null>(null);
 
   const visibleColumns = useMemo(
-    () => lineColumns.filter((col) => visibleKeys.has(col.key)),
+    () => SPEND_LINE_COLUMNS.filter((col) => visibleKeys.has(col.key)),
     [visibleKeys],
   );
 
@@ -256,7 +277,7 @@ export function DetailSheet(props: Props) {
     return sortDir === "desc" ? sorted.reverse() : sorted;
   }, [isGroups, props, groupSortKey, sortDir]);
 
-  function handleLineSort(key: LineSortKey) {
+  function handleLineSort(key: SpendLineSortKey) {
     if (lineSortKey === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
@@ -274,7 +295,7 @@ export function DetailSheet(props: Props) {
     }
   }
 
-  function toggleColumn(key: LineSortKey) {
+  function toggleColumn(key: SpendLineColumnKey) {
     setVisibleKeys((prev) => {
       const next = new Set(prev);
       if (next.has(key)) {
@@ -326,13 +347,22 @@ export function DetailSheet(props: Props) {
   const lineHeader = (
     <tr>
       {visibleColumns.map((col) => (
-        <SortButton
-          key={col.key}
-          label={col.label}
-          active={lineSortKey === col.key}
-          onClick={() => handleLineSort(col.key)}
-          align={col.align}
-        />
+        col.key === "row_number" ? (
+          <th
+            key={col.key}
+            className="whitespace-nowrap px-4 py-3 text-right text-xs font-semibold text-muted-foreground"
+          >
+            {col.label}
+          </th>
+        ) : (
+          <SortButton
+            key={col.key}
+            label={col.label}
+            active={lineSortKey === col.key}
+            onClick={() => handleLineSort(col.key as SpendLineSortKey)}
+            align={col.align}
+          />
+        )
       ))}
       {editable ? (
         <th className="whitespace-nowrap px-4 py-3 text-right text-xs font-semibold text-muted-foreground">
@@ -422,7 +452,7 @@ export function DetailSheet(props: Props) {
                     Cột hiển thị
                   </p>
                   <ul className="grid gap-2">
-                    {lineColumns.map((col) => (
+                    {SPEND_LINE_COLUMNS.map((col) => (
                       <li key={col.key}>
                         <label className="flex cursor-pointer items-center gap-2 text-sm">
                           <input
@@ -453,7 +483,10 @@ export function DetailSheet(props: Props) {
         </div>
       </CardHeader>
       <CardContent
-        className={cn(scrollInParent && "max-h-[600px] overflow-auto")}
+        className={cn(
+          !isGroups && "overflow-x-auto",
+          scrollInParent && "max-h-[600px] overflow-auto",
+        )}
       >
         {!isGroups && props.loading && (
           <p className="mb-3 text-sm text-muted-foreground" aria-live="polite">
@@ -577,10 +610,10 @@ export function DetailSheet(props: Props) {
                 data={sortedLines}
                 className="text-sm"
                 fixedHeaderContent={() => lineHeader}
-                itemContent={(_index, line) => (
+                itemContent={(index, line) => (
                   <>
                     {visibleColumns.map((col) =>
-                      renderLineCell(line, col.key),
+                      renderLineCell(line, col.key, index + 1),
                     )}
                     {renderLineActions(line)}
                   </>
@@ -589,7 +622,7 @@ export function DetailSheet(props: Props) {
                   Table: ({ style, ...tableProps }) => (
                     <table
                       {...tableProps}
-                      className="w-full text-left text-sm"
+                      className="min-w-[1800px] w-full text-left text-sm"
                       style={style}
                     />
                   ),
@@ -605,15 +638,15 @@ export function DetailSheet(props: Props) {
                 }}
               />
             ) : (
-              <table className="w-full text-left text-sm">
+              <table className="min-w-[1800px] w-full text-left text-sm">
                 <thead className="sticky top-0 z-10 border-b bg-muted/90 backdrop-blur">
                   {lineHeader}
                 </thead>
                 <tbody className="divide-y">
-                  {sortedLines.map((line) => (
+                  {sortedLines.map((line, index) => (
                     <tr key={line.id} className="hover:bg-muted/30">
                       {visibleColumns.map((col) =>
-                        renderLineCell(line, col.key),
+                        renderLineCell(line, col.key, index + 1),
                       )}
                       {renderLineActions(line)}
                     </tr>

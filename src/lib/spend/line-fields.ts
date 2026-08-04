@@ -2,6 +2,7 @@ export const MANUAL_BATCH_FILENAME = "Nhập tay";
 
 export type SpendLineFields = {
   payment_date: string | null;
+  received_date: string | null;
   party_code: string | null;
   party_name: string | null;
   item_code: string | null;
@@ -16,11 +17,13 @@ export type SpendLineFields = {
   description: string | null;
   invoice: string | null;
   note: string | null;
+  recipient_name: string | null;
 };
 
 export function emptySpendLineFields(): SpendLineFields {
   return {
     payment_date: null,
+    received_date: null,
     party_code: null,
     party_name: null,
     item_code: null,
@@ -35,6 +38,7 @@ export function emptySpendLineFields(): SpendLineFields {
     description: null,
     invoice: null,
     note: null,
+    recipient_name: null,
   };
 }
 

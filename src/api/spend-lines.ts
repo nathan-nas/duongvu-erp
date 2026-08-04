@@ -45,10 +45,20 @@ function normalizeFields(input: SpendLineFields): SpendLineFields | { error: str
     return { error: INVALID_DATE };
   }
 
+  const receivedDate =
+    input.received_date && input.received_date.trim() !== ""
+      ? input.received_date.trim().slice(0, 10)
+      : null;
+
+  if (receivedDate && !isIsoDate(receivedDate)) {
+    return { error: INVALID_DATE };
+  }
+
   const amount = resolveAmount(input);
 
   return {
     payment_date: paymentDate,
+    received_date: receivedDate,
     party_code: emptyToNull(input.party_code),
     party_name: emptyToNull(input.party_name),
     item_code: emptyToNull(input.item_code),
@@ -63,6 +73,7 @@ function normalizeFields(input: SpendLineFields): SpendLineFields | { error: str
     description: emptyToNull(input.description),
     invoice: emptyToNull(input.invoice),
     note: emptyToNull(input.note),
+    recipient_name: emptyToNull(input.recipient_name),
   };
 }
 
@@ -85,6 +96,10 @@ function mapLine(row: Record<string, unknown>): AnalyticsLine {
       typeof row.payment_date === "string"
         ? row.payment_date.slice(0, 10)
         : null,
+    received_date:
+      typeof row.received_date === "string"
+        ? row.received_date.slice(0, 10)
+        : null,
     party_code: emptyToNull(row.party_code as string | null),
     party_name: emptyToNull(row.party_name as string | null),
     item_code: emptyToNull(row.item_code as string | null),
@@ -99,6 +114,7 @@ function mapLine(row: Record<string, unknown>): AnalyticsLine {
     description: emptyToNull(row.description as string | null),
     invoice: emptyToNull(row.invoice as string | null),
     note: emptyToNull(row.note as string | null),
+    recipient_name: emptyToNull(row.recipient_name as string | null),
   };
 }
 
@@ -180,7 +196,7 @@ export async function createSpendLine(
       quality_flags: [],
     })
     .select(
-      "id, payment_date, party_code, party_name, item_code, item_name, uom, qty, unit_price, amount, plant_name, expense_code, payment_method, description, invoice, note",
+      "id, payment_date, received_date, party_code, party_name, item_code, item_name, uom, qty, unit_price, amount, plant_name, expense_code, payment_method, description, invoice, note, recipient_name",
     )
     .single();
 
@@ -228,7 +244,7 @@ export async function updateSpendLine(
     .eq("id", id)
     .eq("user_id", user.id)
     .select(
-      "id, payment_date, party_code, party_name, item_code, item_name, uom, qty, unit_price, amount, plant_name, expense_code, payment_method, description, invoice, note",
+      "id, payment_date, received_date, party_code, party_name, item_code, item_name, uom, qty, unit_price, amount, plant_name, expense_code, payment_method, description, invoice, note, recipient_name",
     )
     .single();
 

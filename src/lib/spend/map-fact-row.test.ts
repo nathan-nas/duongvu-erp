@@ -11,6 +11,18 @@ describe("mapFactRow", () => {
     expect(row?.amount).toBe(318000);
     expect(row?.plant_name).toBe("MÁY CÁM");
     expect(row?.payment_date).toBe("2025-12-04");
+    expect(row?.recipient_name).toBe("A");
+    expect(row?.received_date).toBeNull();
+  });
+  it("maps recipient and received date from Excel columns N and O", () => {
+    const row = mapFactRow(
+      [412, "NM90", "THIÊN NAM PHÁT", "CÁI", "DB77", "DÂY CUROA B77", 6, 53000, 318000, "mua", "KHO", "MÁY CÁM", "t53", "CHINH", "2/12", "TM", "HD1", ""],
+      2025,
+    );
+
+    expect(row?.recipient_name).toBe("CHINH");
+    expect(row?.received_date).toBe("2025-12-02");
+    expect(row?.received_date_raw).toBe("2/12");
   });
   it("returns null for empty row", () => {
     expect(mapFactRow([], 2025)).toBeNull();

@@ -9,6 +9,9 @@ describe("parsePaymentDate", () => {
   it("parses 1812 as 2025-12-18", () => {
     expect(parsePaymentDate(1812, 2025).date).toBe("2025-12-18");
   });
+  it("parses a day/month string using the period year", () => {
+    expect(parsePaymentDate("2/12", 2025).date).toBe("2025-12-02");
+  });
   it("rejects an impossible DDMM calendar date", () => {
     const result = parsePaymentDate(3102, 2025);
 
