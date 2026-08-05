@@ -23,9 +23,18 @@ export type SpendLineDraft = {
   quality_flags: string[];
 };
 
+export type SpendSheetSummary = {
+  sheetName: string;
+  factRows: number;
+  amountSum: number;
+};
+
 export type ParsedWorkbookPreview = {
   sheetNames: string[];
   hasFactSheet: boolean;
+  missingSheetNames: string[];
+  unreadableSheetNames: string[];
+  sheetSummaries: SpendSheetSummary[];
   batchKind: BatchKind;
   suggestedPeriodYear: number | null;
   lines: SpendLineDraft[];

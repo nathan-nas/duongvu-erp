@@ -18,13 +18,14 @@ import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
 import { SPEND_UPLOADS_BUCKET } from "@/lib/spend/constants";
 import { extractPeriodYearFromFilename } from "@/lib/spend/period-year";
-import type { BatchKind } from "@/lib/spend/types";
+import type { BatchKind, SpendSheetSummary } from "@/lib/spend/types";
 
 type PreparedUpload = {
   batchId: string;
   filename: string;
   factRows: number;
   amountSum: number;
+  sheetSummaries: SpendSheetSummary[];
   batchKind: BatchKind;
   periodYear: number;
 };
@@ -67,7 +68,7 @@ export function UploadWizard() {
         });
 
       if (uploadError) {
-        const message = "Không tải được file lên máy chủ.";
+        const message = "Kh\u00f4ng t\u1ea3i \u0111\u01b0\u1ee3c file l\u00ean m\u00e1y ch\u1ee7.";
         setError(message);
         toast.error(message);
         return;
@@ -85,13 +86,14 @@ export function UploadWizard() {
         filename: preview.sourceFilename,
         factRows: preview.factRows,
         amountSum: preview.amountSum,
+        sheetSummaries: preview.sheetSummaries,
         batchKind: preview.batchKind,
         periodYear:
           preview.suggestedPeriodYear ?? preview.periodYear ?? suggestedYear,
       });
-      toast.success("Đã đọc file. Kiểm tra và xác nhận nhập.");
+      toast.success("\u0110\u00e3 \u0111\u1ecdc file. Ki\u1ec3m tra v\u00e0 x\u00e1c nh\u1eadn nh\u1eadp.");
     } catch {
-      const message = "Không thể xử lý file Excel. Vui lòng chọn lại file.";
+      const message = "Kh\u00f4ng th\u1ec3 x\u1eed l\u00fd file Excel. Vui l\u00f2ng ch\u1ecdn l\u1ea1i file.";
       setError(message);
       toast.error(message);
     } finally {
@@ -115,7 +117,7 @@ export function UploadWizard() {
   return (
     <Card className="motion-enter">
       <CardHeader>
-        <CardTitle>Chọn file Excel</CardTitle>
+        <CardTitle>{"Ch\u1ecdn file Excel"}</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-4">
         <label
@@ -127,10 +129,10 @@ export function UploadWizard() {
             aria-hidden
           />
           <span className="text-sm font-medium">
-            Kéo thả hoặc nhấn để chọn file
+            {"K\u00e9o th\u1ea3 ho\u1eb7c nh\u1ea5n \u0111\u1ec3 ch\u1ecdn file"}
           </span>
           <span className="text-xs text-muted-foreground">
-            Hỗ trợ .xlsx, .xls
+            {"H\u1ed7 tr\u1ee3 .xlsx, .xls"}
           </span>
           <Input
             id="spend-file"
@@ -143,7 +145,7 @@ export function UploadWizard() {
         </label>
         {isWorking && (
           <p className="text-sm text-muted-foreground" aria-live="polite">
-            Đang tải lên và đọc file…
+            {"\u0110ang t\u1ea3i l\u00ean v\u00e0 \u0111\u1ecdc file\u2026"}
           </p>
         )}
         {error && <p className="text-sm text-destructive">{error}</p>}
