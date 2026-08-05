@@ -66,10 +66,16 @@ export function parseSpendWorkbook(
     ? []
     : rows.slice(headerRowIndex + 1).map((row, index) => {
         const sheetRow = headerRowIndex + 1 + index;
-        const dateCell = sheet[
+        const paymentDateCell = sheet[
           XLSX.utils.encode_cell({ r: range.s.r + sheetRow, c: 0 })
         ];
-        return [dateCellValue(dateCell, date1904), ...row.slice(1)];
+        const receivedDateCell = sheet[
+          XLSX.utils.encode_cell({ r: range.s.r + sheetRow, c: 14 })
+        ];
+        const normalizedRow = [...row];
+        normalizedRow[0] = dateCellValue(paymentDateCell, date1904);
+        normalizedRow[14] = dateCellValue(receivedDateCell, date1904);
+        return normalizedRow;
       });
   const lines = dataRows
     .map((row) => mapFactRow(row, periodYear))

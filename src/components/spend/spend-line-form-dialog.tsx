@@ -36,6 +36,7 @@ type Props = {
 function lineToFields(line: AnalyticsLine): SpendLineFields {
   return {
     payment_date: line.payment_date,
+    received_date: line.received_date,
     party_code: line.party_code,
     party_name: line.party_name,
     item_code: line.item_code,
@@ -50,6 +51,7 @@ function lineToFields(line: AnalyticsLine): SpendLineFields {
     description: line.description,
     invoice: line.invoice,
     note: line.note,
+    recipient_name: line.recipient_name,
   };
 }
 
@@ -121,7 +123,7 @@ function SpendLineFormBody({
   return (
     <>
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field id="payment_date" label="Ngày thanh toán">
+        <Field id="payment_date" label="Ngày chi tiền">
           <DatePicker
             id="payment_date"
             value={fields.payment_date ?? ""}
@@ -129,6 +131,18 @@ function SpendLineFormBody({
               setFields((prev) => ({
                 ...prev,
                 payment_date: v || null,
+              }))
+            }
+          />
+        </Field>
+        <Field id="received_date" label="Ngày nhập hàng">
+          <DatePicker
+            id="received_date"
+            value={fields.received_date ?? ""}
+            onChange={(v) =>
+              setFields((prev) => ({
+                ...prev,
+                received_date: v || null,
               }))
             }
           />
@@ -152,6 +166,13 @@ function SpendLineFormBody({
             id="payment_method"
             value={fields.payment_method ?? ""}
             onChange={(e) => setText("payment_method", e.target.value)}
+          />
+        </Field>
+        <Field id="recipient_name" label="Người mua/nhận">
+          <Input
+            id="recipient_name"
+            value={fields.recipient_name ?? ""}
+            onChange={(e) => setText("recipient_name", e.target.value)}
           />
         </Field>
         <Field id="party_code" label="Mã cửa hàng">

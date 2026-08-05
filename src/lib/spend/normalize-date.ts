@@ -61,6 +61,18 @@ export function parsePaymentDate(
     return { date, raw: s, flags };
   }
   const str = String(raw).trim();
+  const dm = str.match(/^(\d{1,2})[\/\-.](\d{1,2})$/);
+  if (dm) {
+    const day = Number(dm[1]);
+    const month = Number(dm[2]);
+    const date = formatValidDate(periodYear, month, day);
+    if (!date) {
+      flags.push("invalid_date");
+      return { date: null, raw: str, flags };
+    }
+
+    return { date, raw: str, flags };
+  }
   const dmy = str.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
   if (dmy) {
     const day = Number(dmy[1]);

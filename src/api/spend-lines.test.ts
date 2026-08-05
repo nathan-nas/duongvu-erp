@@ -35,6 +35,7 @@ describe("spend-lines CRUD", () => {
     await expect(
       createSpendLine({
         payment_date: "2026-01-01",
+        received_date: null,
         party_code: null,
         party_name: null,
         item_code: null,
@@ -49,6 +50,7 @@ describe("spend-lines CRUD", () => {
         description: null,
         invoice: null,
         note: null,
+        recipient_name: null,
       }),
     ).resolves.toEqual({ error: "Bạn cần đăng nhập." });
   });
@@ -78,6 +80,7 @@ describe("spend-lines CRUD", () => {
       data: {
         id: "line-1",
         payment_date: "2026-01-01",
+        received_date: "2026-01-02",
         party_code: null,
         party_name: "Shop",
         item_code: null,
@@ -92,6 +95,7 @@ describe("spend-lines CRUD", () => {
         description: null,
         invoice: null,
         note: null,
+        recipient_name: "Buyer",
       },
       error: null,
     });
@@ -108,6 +112,7 @@ describe("spend-lines CRUD", () => {
 
     const result = await createSpendLine({
       payment_date: "2026-01-01",
+      received_date: "2026-01-02",
       party_code: null,
       party_name: "Shop",
       item_code: null,
@@ -122,6 +127,7 @@ describe("spend-lines CRUD", () => {
       description: null,
       invoice: null,
       note: null,
+      recipient_name: "Buyer",
     });
 
     expect(result).toMatchObject({
@@ -151,6 +157,7 @@ describe("spend-lines CRUD", () => {
       data: {
         id: "line-1",
         payment_date: "2026-01-02",
+        received_date: "2026-01-03",
         party_code: null,
         party_name: "Shop 2",
         item_code: null,
@@ -165,6 +172,7 @@ describe("spend-lines CRUD", () => {
         description: null,
         invoice: null,
         note: null,
+        recipient_name: "Buyer 2",
       },
       error: null,
     });
@@ -179,6 +187,7 @@ describe("spend-lines CRUD", () => {
     await expect(
       updateSpendLine("line-1", {
         payment_date: "2026-01-02",
+        received_date: "2026-01-03",
         party_code: null,
         party_name: "Shop 2",
         item_code: null,
@@ -193,6 +202,7 @@ describe("spend-lines CRUD", () => {
         description: null,
         invoice: null,
         note: null,
+        recipient_name: "Buyer 2",
       }),
     ).resolves.toMatchObject({
       line: { id: "line-1", amount: 200 },

@@ -14,6 +14,7 @@ export type SpendFilterKind =
 export type AnalyticsLine = {
   id: string;
   payment_date: string | null;
+  received_date: string | null;
   party_code: string | null;
   party_name: string | null;
   item_code: string | null;
@@ -28,6 +29,7 @@ export type AnalyticsLine = {
   description: string | null;
   invoice: string | null;
   note: string | null;
+  recipient_name: string | null;
 };
 
 export type SpendDateBounds = {
@@ -70,6 +72,7 @@ function mapLineRows(rows: Record<string, unknown>[]): AnalyticsLine[] {
   return rows.map((line) => ({
     id: String(line.id),
     payment_date: stringOrNull(line.payment_date)?.slice(0, 10) ?? null,
+    received_date: stringOrNull(line.received_date)?.slice(0, 10) ?? null,
     party_code: stringOrNull(line.party_code),
     party_name: stringOrNull(line.party_name),
     item_code: stringOrNull(line.item_code),
@@ -84,6 +87,7 @@ function mapLineRows(rows: Record<string, unknown>[]): AnalyticsLine[] {
     description: stringOrNull(line.description),
     invoice: stringOrNull(line.invoice),
     note: stringOrNull(line.note),
+    recipient_name: stringOrNull(line.recipient_name),
   }));
 }
 

@@ -3,6 +3,8 @@ export type BatchKind = "annual" | "period" | "unknown";
 export type SpendLineDraft = {
   payment_date: string | null;
   payment_date_raw: string | null;
+  received_date: string | null;
+  received_date_raw: string | null;
   party_code: string | null;
   party_name: string | null;
   item_code: string | null;
@@ -17,6 +19,7 @@ export type SpendLineDraft = {
   description: string | null;
   invoice: string | null;
   note: string | null;
+  recipient_name: string | null;
   quality_flags: string[];
 };
 

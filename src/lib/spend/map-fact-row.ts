@@ -35,11 +35,17 @@ export function mapFactRow(
   if (isBlankRow(cells)) return null;
 
   const dateResult = parsePaymentDate(cells[0], periodYear);
+  const receivedDateResult = parsePaymentDate(cells[14], periodYear);
   const qty = cellNum(cells[6]);
   const unitPrice = cellNum(cells[7]);
   const amount = cellNum(cells[8]);
 
   const qualityFlags = [...dateResult.flags];
+  if (cells[14] != null && cells[14] !== "") {
+    qualityFlags.push(
+      ...receivedDateResult.flags.map((flag) => `received_${flag}`),
+    );
+  }
   if (
     qty != null &&
     unitPrice != null &&
@@ -52,6 +58,8 @@ export function mapFactRow(
   return {
     payment_date: dateResult.date,
     payment_date_raw: dateResult.raw,
+    received_date: receivedDateResult.date,
+    received_date_raw: receivedDateResult.raw,
     party_code: upperCode(cells[1]),
     party_name: cellStr(cells[2]),
     uom: cellStr(cells[3]),
@@ -66,6 +74,7 @@ export function mapFactRow(
     description: cellStr(cells[9]),
     invoice: cellStr(cells[16]),
     note: cellStr(cells[17]),
+    recipient_name: cellStr(cells[13]),
     quality_flags: qualityFlags,
   };
 }

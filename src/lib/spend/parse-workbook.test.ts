@@ -20,6 +20,8 @@ function workbookBuffer(): ArrayBuffer {
       "Kho",
       "Nhà máy",
       "Mã chi phí",
+      "Người nhận",
+      "Phiếu ngày",
     ],
     [
       45658,
@@ -35,9 +37,12 @@ function workbookBuffer(): ArrayBuffer {
       "Kho",
       "Máy Cám",
       "t53",
+      "CHINH",
+      45659,
     ],
   ]);
   factSheet.A4.z = "dd/mm/yyyy";
+  factSheet.O4.z = "dd/mm/yyyy";
 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([["Plant"]]), "NM01");
@@ -61,6 +66,8 @@ describe("parseSpendWorkbook", () => {
         party_code: "NM90",
         item_code: "DB77",
         amount: 318000,
+        recipient_name: "CHINH",
+        received_date: "2025-01-02",
       }),
     ]);
   });

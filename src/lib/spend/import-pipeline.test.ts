@@ -13,6 +13,8 @@ import {
 const sampleLine: SpendLineDraft = {
   payment_date: "2026-01-01",
   payment_date_raw: null,
+  received_date: null,
+  received_date_raw: null,
   party_code: null,
   party_name: "A",
   item_code: null,
@@ -27,6 +29,7 @@ const sampleLine: SpendLineDraft = {
   description: null,
   invoice: null,
   note: null,
+  recipient_name: null,
   quality_flags: [],
 };
 
