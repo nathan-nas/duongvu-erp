@@ -21,9 +21,9 @@ import { formatVnd } from "@/lib/spend/format";
 import type { BatchKind, SpendSheetSummary } from "@/lib/spend/types";
 
 const batchKindLabel = {
-  annual: "C\u1ea3 n\u0103m",
-  period: "Theo k\u1ef3",
-  unknown: "Kh\u00f4ng x\u00e1c \u0111\u1ecbnh",
+  annual: "Cả năm",
+  period: "Theo kỳ",
+  unknown: "Không xác định",
 };
 
 type ConfirmImportProps = {
@@ -67,7 +67,7 @@ export function ConfirmImport({
     }
 
     toast.success(
-      `\u0110\u00e3 nh\u1eadp ${factRows.toLocaleString("vi-VN")} d\u00f2ng th\u00e0nh c\u00f4ng.`,
+      `Đã nhập ${factRows.toLocaleString("vi-VN")} dòng thành công.`,
     );
     router.push("/app/analytics");
   }
@@ -75,19 +75,19 @@ export function ConfirmImport({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{"X\u00e1c nh\u1eadn nh\u1eadp d\u1eef li\u1ec7u"}</CardTitle>
+        <CardTitle>Xác nhận nhập dữ liệu</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-4">
         <div>
-          <p className="text-sm text-muted-foreground">{"T\u00ean file"}</p>
+          <p className="text-sm text-muted-foreground">Tên file</p>
           <p>{filename}</p>
         </div>
         <div>
-          <p className="text-sm text-muted-foreground">{"Lo\u1ea1i file"}</p>
+          <p className="text-sm text-muted-foreground">Loại file</p>
           <p>{batchKindLabel[batchKind]}</p>
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="period-year">{"N\u0103m h\u1ea1ch to\u00e1n"}</Label>
+          <Label htmlFor="period-year">Năm hạch toán</Label>
           <Input
             id="period-year"
             type="number"
@@ -99,7 +99,7 @@ export function ConfirmImport({
           />
         </div>
         <div className="grid gap-2">
-          <p className="text-sm font-medium">{"Chi ti\u1ebft theo sheet"}</p>
+          <p className="text-sm font-medium">Chi tiết theo sheet</p>
           <div className="grid gap-2">
             {sheetSummaries.map((summary) => (
               <div
@@ -108,7 +108,7 @@ export function ConfirmImport({
               >
                 <span className="font-medium">{summary.sheetName}</span>
                 <span className="text-sm text-muted-foreground">
-                  {summary.factRows.toLocaleString("vi-VN")}{" d\u00f2ng \u00b7 "}
+                  {summary.factRows.toLocaleString("vi-VN")}{" dòng · "}
                   {formatVnd(summary.amountSum)}
                 </span>
               </div>
@@ -116,24 +116,24 @@ export function ConfirmImport({
           </div>
         </div>
         <div>
-          <p className="text-sm text-muted-foreground">{"T\u1ed5ng s\u1ed1 d\u00f2ng"}</p>
+          <p className="text-sm text-muted-foreground">Tổng số dòng</p>
           <p>{factRows.toLocaleString("vi-VN")}</p>
         </div>
         <div>
-          <p className="text-sm text-muted-foreground">{"T\u1ed5ng th\u00e0nh ti\u1ec1n"}</p>
+          <p className="text-sm text-muted-foreground">Tổng thành tiền</p>
           <p>{formatVnd(amountSum)}</p>
         </div>
         {saving && (
-          <p aria-live="polite">{"\u0110ang l\u01b0u d\u1eef li\u1ec7u tr\u00ean m\u00e1y ch\u1ee7\u2026"}</p>
+          <p aria-live="polite">Đang lưu dữ liệu trên máy chủ…</p>
         )}
         {error && <p className="text-destructive">{error}</p>}
       </CardContent>
       <CardFooter className="gap-2">
         <Button type="button" variant="outline" disabled={saving} onClick={onCancel}>
-          {"H\u1ee7y"}
+          Hủy
         </Button>
         <Button type="button" disabled={saving} onClick={confirmImport}>
-          {"X\u00e1c nh\u1eadn nh\u1eadp"}
+          Xác nhận nhập
         </Button>
       </CardFooter>
     </Card>

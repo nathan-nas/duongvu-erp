@@ -7,7 +7,7 @@ function workbookBuffer(): ArrayBuffer {
     ["REPORT"],
     [],
     [
-      "Ng\u00e0y",
+      "Ngày",
       "Party code",
       "Party name",
       "UOM",
@@ -15,7 +15,7 @@ function workbookBuffer(): ArrayBuffer {
       "Item name",
       "Quantity",
       "Unit price",
-      "TH\u00c0NH TI\u1ec0N",
+      "THÀNH TIỀN",
       "Description",
       "Kho",
       "Plant",
@@ -46,8 +46,8 @@ function workbookBuffer(): ArrayBuffer {
 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([["Plant"]]), "NM01");
-  XLSX.utils.book_append_sheet(workbook, factSheet, "V\u1eadt t\u01b0 Nh\u00e0 m\u00e1y");
-  XLSX.utils.book_append_sheet(workbook, factSheet, "V\u1eacT T\u01af XE");
+  XLSX.utils.book_append_sheet(workbook, factSheet, "Vật tư Nhà máy");
+  XLSX.utils.book_append_sheet(workbook, factSheet, "VẬT TƯ XE");
   XLSX.utils.book_append_sheet(workbook, factSheet, "BANG CHI TIET");
 
   return XLSX.write(workbook, { type: "array", bookType: "xlsx" });
@@ -65,8 +65,8 @@ describe("parseSpendWorkbook", () => {
     expect(preview.factRows).toBe(2);
     expect(preview.amountSum).toBe(636000);
     expect(preview.sheetSummaries).toEqual([
-      { sheetName: "V\u1eacT T\u01af NH\u00c0 M\u00c1Y", factRows: 1, amountSum: 318000 },
-      { sheetName: "V\u1eacT T\u01af XE", factRows: 1, amountSum: 318000 },
+      { sheetName: "VẬT TƯ NHÀ MÁY", factRows: 1, amountSum: 318000 },
+      { sheetName: "VẬT TƯ XE", factRows: 1, amountSum: 318000 },
     ]);
     expect(preview.lines).toHaveLength(2);
     expect(preview.lines[0]).toEqual(
@@ -83,12 +83,12 @@ describe("parseSpendWorkbook", () => {
 
   it("uses an overridden period year when mapping rows", () => {
     const sheet = XLSX.utils.aoa_to_sheet([
-      ["Ng\u00e0y", "", "", "", "", "", "", "", "TH\u00c0NH TI\u1ec0N"],
+      ["Ngày", "", "", "", "", "", "", "", "THÀNH TIỀN"],
       [412, "", "", "", "", "", "", "", 100],
     ]);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, sheet, "V\u1eacT T\u01af NH\u00c0 M\u00c1Y");
-    XLSX.utils.book_append_sheet(workbook, sheet, "V\u1eacT T\u01af XE");
+    XLSX.utils.book_append_sheet(workbook, sheet, "VẬT TƯ NHÀ MÁY");
+    XLSX.utils.book_append_sheet(workbook, sheet, "VẬT TƯ XE");
     const preview = parseSpendWorkbook(
       XLSX.write(workbook, { type: "array", bookType: "xlsx" }),
       "vat-tu-T5-2025.xlsx",
@@ -102,8 +102,8 @@ describe("parseSpendWorkbook", () => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(
       workbook,
-      XLSX.utils.aoa_to_sheet([["Ng\u00e0y", "", "", "", "", "", "", "", "TH\u00c0NH TI\u1ec0N"]]),
-      "V\u1eacT T\u01af NH\u00c0 M\u00c1Y",
+      XLSX.utils.aoa_to_sheet([["Ngày", "", "", "", "", "", "", "", "THÀNH TIỀN"]]),
+      "VẬT TƯ NHÀ MÁY",
     );
     const preview = parseSpendWorkbook(
       XLSX.write(workbook, { type: "array", bookType: "xlsx" }),
@@ -111,7 +111,7 @@ describe("parseSpendWorkbook", () => {
     );
 
     expect(preview.hasFactSheet).toBe(false);
-    expect(preview.missingSheetNames).toEqual(["V\u1eacT T\u01af XE"]);
+    expect(preview.missingSheetNames).toEqual(["VẬT TƯ XE"]);
     expect(preview.lines).toEqual([]);
     expect(preview.sheetSummaries).toEqual([]);
   });
@@ -119,18 +119,18 @@ describe("parseSpendWorkbook", () => {
   it("rejects a workbook when a required sheet has no readable header", () => {
     const workbook = XLSX.utils.book_new();
     const validSheet = XLSX.utils.aoa_to_sheet([
-      ["Ng\u00e0y", "", "", "", "", "", "", "", "TH\u00c0NH TI\u1ec0N"],
+      ["Ngày", "", "", "", "", "", "", "", "THÀNH TIỀN"],
       [412, "", "", "", "", "", "", "", 100],
     ]);
-    XLSX.utils.book_append_sheet(workbook, validSheet, "V\u1eacT T\u01af NH\u00c0 M\u00c1Y");
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([["Sai"]]), "V\u1eacT T\u01af XE");
+    XLSX.utils.book_append_sheet(workbook, validSheet, "VẬT TƯ NHÀ MÁY");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([["Sai"]]), "VẬT TƯ XE");
     const preview = parseSpendWorkbook(
       XLSX.write(workbook, { type: "array", bookType: "xlsx" }),
       "vat-tu-T5-2025.xlsx",
     );
 
     expect(preview.hasFactSheet).toBe(false);
-    expect(preview.unreadableSheetNames).toEqual(["V\u1eacT T\u01af XE"]);
+    expect(preview.unreadableSheetNames).toEqual(["VẬT TƯ XE"]);
     expect(preview.lines).toEqual([]);
   });
 });

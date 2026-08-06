@@ -68,7 +68,7 @@ export function UploadWizard() {
         });
 
       if (uploadError) {
-        const message = "Kh\u00f4ng t\u1ea3i \u0111\u01b0\u1ee3c file l\u00ean m\u00e1y ch\u1ee7.";
+        const message = "Không tải được file lên máy chủ.";
         setError(message);
         toast.error(message);
         return;
@@ -91,9 +91,9 @@ export function UploadWizard() {
         periodYear:
           preview.suggestedPeriodYear ?? preview.periodYear ?? suggestedYear,
       });
-      toast.success("\u0110\u00e3 \u0111\u1ecdc file. Ki\u1ec3m tra v\u00e0 x\u00e1c nh\u1eadn nh\u1eadp.");
+      toast.success("Đã đọc file. Kiểm tra và xác nhận nhập.");
     } catch {
-      const message = "Kh\u00f4ng th\u1ec3 x\u1eed l\u00fd file Excel. Vui l\u00f2ng ch\u1ecdn l\u1ea1i file.";
+      const message = "Không thể xử lý file Excel. Vui lòng chọn lại file.";
       setError(message);
       toast.error(message);
     } finally {
@@ -117,7 +117,7 @@ export function UploadWizard() {
   return (
     <Card className="motion-enter">
       <CardHeader>
-        <CardTitle>{"Ch\u1ecdn file Excel"}</CardTitle>
+        <CardTitle>Chọn file Excel</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-4">
         <label
@@ -129,10 +129,10 @@ export function UploadWizard() {
             aria-hidden
           />
           <span className="text-sm font-medium">
-            {"K\u00e9o th\u1ea3 ho\u1eb7c nh\u1ea5n \u0111\u1ec3 ch\u1ecdn file"}
+            Kéo thả hoặc nhấn để chọn file
           </span>
           <span className="text-xs text-muted-foreground">
-            {"H\u1ed7 tr\u1ee3 .xlsx, .xls"}
+            Hỗ trợ .xlsx, .xls
           </span>
           <Input
             id="spend-file"
@@ -145,7 +145,7 @@ export function UploadWizard() {
         </label>
         {isWorking && (
           <p className="text-sm text-muted-foreground" aria-live="polite">
-            {"\u0110ang t\u1ea3i l\u00ean v\u00e0 \u0111\u1ecdc file\u2026"}
+            Đang tải lên và đọc file…
           </p>
         )}
         {error && <p className="text-sm text-destructive">{error}</p>}

@@ -5,8 +5,8 @@ import { extractPeriodYearFromFilename } from "./period-year";
 import type { ParsedWorkbookPreview } from "./types";
 
 const REQUIRED_SHEET_NAMES = [
-  "V\u1eacT T\u01af NH\u00c0 M\u00c1Y",
-  "V\u1eacT T\u01af XE",
+  "VẬT TƯ NHÀ MÁY",
+  "VẬT TƯ XE",
 ] as const;
 
 function normalizeSheetName(name: string) {
@@ -15,14 +15,14 @@ function normalizeSheetName(name: string) {
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .toUpperCase()
-    .replace(/\u0110/g, "D")
+    .replace(/Đ/g, "D")
     .replace(/\s+/g, "");
 }
 
 function hasExpectedHeaders(row: unknown[]) {
   const headers = row.map((cell) => String(cell ?? "").normalize("NFC").toUpperCase());
-  return headers.some((header) => header.includes("TH\u00c0NH TI\u1ec0N")) &&
-    headers.some((header) => header.includes("NG\u00c0Y"));
+  return headers.some((header) => header.includes("THÀNH TIỀN")) &&
+    headers.some((header) => header.includes("NGÀY"));
 }
 
 function dateCellValue(cell: XLSX.CellObject | undefined, date1904: boolean) {

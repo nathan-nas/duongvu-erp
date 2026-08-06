@@ -14,13 +14,13 @@ vi.mock("@/lib/supabase/server", () => ({
 
 vi.mock("@/lib/spend/parse-workbook", () => ({
   parseSpendWorkbook: vi.fn(() => ({
-    sheetNames: ["V\u1eacT T\u01af NH\u00c0 M\u00c1Y", "V\u1eacT T\u01af XE"],
+    sheetNames: ["VẬT TƯ NHÀ MÁY", "VẬT TƯ XE"],
     hasFactSheet: true,
     missingSheetNames: [],
     unreadableSheetNames: [],
     sheetSummaries: [
-      { sheetName: "V\u1eacT T\u01af NH\u00c0 M\u00c1Y", factRows: 1, amountSum: 100 },
-      { sheetName: "V\u1eacT T\u01af XE", factRows: 0, amountSum: 0 },
+      { sheetName: "VẬT TƯ NHÀ MÁY", factRows: 1, amountSum: 100 },
+      { sheetName: "VẬT TƯ XE", factRows: 0, amountSum: 0 },
     ],
     batchKind: "annual",
     suggestedPeriodYear: 2026,
@@ -73,7 +73,7 @@ describe("import spend server actions", () => {
         source_filename: "chi-tiet.xlsx",
         period_year: 2026,
       }),
-    ).resolves.toEqual({ error: "B\u1ea1n c\u1ea7n \u0111\u0103ng nh\u1eadp." });
+    ).resolves.toEqual({ error: "Bạn cần đăng nhập." });
 
     expect(from).not.toHaveBeenCalled();
   });
@@ -151,7 +151,7 @@ describe("import spend server actions", () => {
     });
 
     await expect(prepareImport("batch-1")).resolves.toEqual({
-      error: "Ch\u01b0a t\u1ea3i l\u00ean file Excel.",
+      error: "Chưa tải lên file Excel.",
     });
   });
 

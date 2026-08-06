@@ -14,12 +14,12 @@ import {
 } from "@/lib/spend/storage-paths";
 import type { BatchKind, ParsedWorkbookPreview, SpendSheetSummary } from "@/lib/spend/types";
 
-const LOGIN_REQUIRED = "B\u1ea1n c\u1ea7n \u0111\u0103ng nh\u1eadp.";
-const SAVE_FAILED = "Kh\u00f4ng l\u01b0u \u0111\u01b0\u1ee3c d\u1eef li\u1ec7u.";
-const PARSE_FAILED = "Kh\u00f4ng th\u1ec3 \u0111\u1ecdc file Excel.";
+const LOGIN_REQUIRED = "Bạn cần đăng nhập.";
+const SAVE_FAILED = "Không lưu được dữ liệu.";
+const PARSE_FAILED = "Không thể đọc file Excel.";
 const NO_FACT_ROWS =
-  "Kh\u00f4ng t\u00ecm th\u1ea5y d\u00f2ng d\u1eef li\u1ec7u h\u1ee3p l\u1ec7 trong hai sheet v\u1eadt t\u01b0.";
-const UPLOAD_MISSING = "Ch\u01b0a t\u1ea3i l\u00ean file Excel.";
+  "Không tìm thấy dòng dữ liệu hợp lệ trong hai sheet vật tư.";
+const UPLOAD_MISSING = "Chưa tải lên file Excel.";
 
 type PendingBatchResult =
   | { batchId: string; storagePath: string }
@@ -48,10 +48,10 @@ function workbookValidationError(
   >,
 ) {
   if (preview.missingSheetNames.length > 0) {
-    return `Thi\u1ebfu sheet b\u1eaft bu\u1ed9c: ${preview.missingSheetNames.join(", ")}.`;
+    return `Thiếu sheet bắt buộc: ${preview.missingSheetNames.join(", ")}.`;
   }
   if (preview.unreadableSheetNames.length > 0) {
-    return `Kh\u00f4ng \u0111\u1ecdc \u0111\u01b0\u1ee3c ti\u00eau \u0111\u1ec1 sheet: ${preview.unreadableSheetNames.join(", ")}.`;
+    return `Không đọc được tiêu đề sheet: ${preview.unreadableSheetNames.join(", ")}.`;
   }
   if (!preview.hasFactSheet || preview.factRows === 0) {
     return NO_FACT_ROWS;
