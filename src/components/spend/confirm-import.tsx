@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatVnd } from "@/lib/spend/format";
-import type { BatchKind } from "@/lib/spend/types";
+import type { BatchKind, SpendSheetSummary } from "@/lib/spend/types";
 
 const batchKindLabel = {
   annual: "Cả năm",
@@ -31,6 +31,7 @@ type ConfirmImportProps = {
   filename: string;
   factRows: number;
   amountSum: number;
+  sheetSummaries: SpendSheetSummary[];
   batchKind: BatchKind;
   periodYear: number;
   onCancel: () => void;
@@ -41,6 +42,7 @@ export function ConfirmImport({
   filename,
   factRows,
   amountSum,
+  sheetSummaries,
   batchKind,
   periodYear: initialPeriodYear,
   onCancel,
@@ -96,8 +98,25 @@ export function ConfirmImport({
             onChange={(event) => setPeriodYear(Number(event.target.value))}
           />
         </div>
+        <div className="grid gap-2">
+          <p className="text-sm font-medium">Chi tiết theo sheet</p>
+          <div className="grid gap-2">
+            {sheetSummaries.map((summary) => (
+              <div
+                key={summary.sheetName}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2"
+              >
+                <span className="font-medium">{summary.sheetName}</span>
+                <span className="text-sm text-muted-foreground">
+                  {summary.factRows.toLocaleString("vi-VN")}{" dòng · "}
+                  {formatVnd(summary.amountSum)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
         <div>
-          <p className="text-sm text-muted-foreground">Số dòng</p>
+          <p className="text-sm text-muted-foreground">Tổng số dòng</p>
           <p>{factRows.toLocaleString("vi-VN")}</p>
         </div>
         <div>

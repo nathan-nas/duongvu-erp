@@ -12,13 +12,13 @@ import {
   spendParsedStoragePath,
   spendWorkbookStoragePath,
 } from "@/lib/spend/storage-paths";
-import type { BatchKind } from "@/lib/spend/types";
+import type { BatchKind, ParsedWorkbookPreview, SpendSheetSummary } from "@/lib/spend/types";
 
 const LOGIN_REQUIRED = "Bạn cần đăng nhập.";
 const SAVE_FAILED = "Không lưu được dữ liệu.";
 const PARSE_FAILED = "Không thể đọc file Excel.";
-const NO_FACT_SHEET =
-  "Không tìm thấy sheet BANG CHI TIET hoặc không đọc được tiêu đề.";
+const NO_FACT_ROWS =
+  "Không tìm thấy dòng dữ liệu hợp lệ trong hai sheet vật tư.";
 const UPLOAD_MISSING = "Chưa tải lên file Excel.";
 
 type PendingBatchResult =
@@ -30,12 +30,34 @@ type PrepareResult =
       batchId: string;
       factRows: number;
       amountSum: number;
+      sheetSummaries: SpendSheetSummary[];
       batchKind: BatchKind;
       suggestedPeriodYear: number | null;
       sourceFilename: string;
       periodYear: number;
     }
   | { error: string };
+
+function workbookValidationError(
+  preview: Pick<
+    ParsedWorkbookPreview,
+    | "hasFactSheet"
+    | "missingSheetNames"
+    | "unreadableSheetNames"
+    | "factRows"
+  >,
+) {
+  if (preview.missingSheetNames.length > 0) {
+    return `Thiếu sheet bắt buộc: ${preview.missingSheetNames.join(", ")}.`;
+  }
+  if (preview.unreadableSheetNames.length > 0) {
+    return `Không đọc được tiêu đề sheet: ${preview.unreadableSheetNames.join(", ")}.`;
+  }
+  if (!preview.hasFactSheet || preview.factRows === 0) {
+    return NO_FACT_ROWS;
+  }
+  return null;
+}
 
 async function requireUser() {
   const supabase = await createClient();
@@ -138,8 +160,9 @@ export async function prepareImport(batchId: string): Promise<PrepareResult> {
     return { error: PARSE_FAILED };
   }
 
-  if (!preview.hasFactSheet || preview.factRows === 0) {
-    return { error: NO_FACT_SHEET };
+  const validationError = workbookValidationError(preview);
+  if (validationError) {
+    return { error: validationError };
   }
 
   const parsedPath = spendParsedStoragePath(user.id, batchId);
@@ -173,6 +196,7 @@ export async function prepareImport(batchId: string): Promise<PrepareResult> {
     batchId,
     factRows: preview.factRows,
     amountSum: preview.amountSum,
+    sheetSummaries: preview.sheetSummaries,
     batchKind: preview.batchKind,
     suggestedPeriodYear: preview.suggestedPeriodYear,
     sourceFilename: batch.source_filename,
@@ -241,13 +265,14 @@ export async function commitImport(
     return { error: PARSE_FAILED };
   }
 
-  if (!preview.hasFactSheet || preview.factRows === 0) {
+  const validationError = workbookValidationError(preview);
+  if (validationError) {
     await supabase
       .from("import_batch")
       .update({ status: "failed" })
       .eq("id", batchId)
       .eq("user_id", user.id);
-    return { error: NO_FACT_SHEET };
+    return { error: validationError };
   }
 
   const parsedPath =

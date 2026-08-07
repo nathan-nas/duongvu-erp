@@ -18,13 +18,14 @@ import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
 import { SPEND_UPLOADS_BUCKET } from "@/lib/spend/constants";
 import { extractPeriodYearFromFilename } from "@/lib/spend/period-year";
-import type { BatchKind } from "@/lib/spend/types";
+import type { BatchKind, SpendSheetSummary } from "@/lib/spend/types";
 
 type PreparedUpload = {
   batchId: string;
   filename: string;
   factRows: number;
   amountSum: number;
+  sheetSummaries: SpendSheetSummary[];
   batchKind: BatchKind;
   periodYear: number;
 };
@@ -85,6 +86,7 @@ export function UploadWizard() {
         filename: preview.sourceFilename,
         factRows: preview.factRows,
         amountSum: preview.amountSum,
+        sheetSummaries: preview.sheetSummaries,
         batchKind: preview.batchKind,
         periodYear:
           preview.suggestedPeriodYear ?? preview.periodYear ?? suggestedYear,

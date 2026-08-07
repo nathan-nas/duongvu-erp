@@ -14,8 +14,14 @@ vi.mock("@/lib/supabase/server", () => ({
 
 vi.mock("@/lib/spend/parse-workbook", () => ({
   parseSpendWorkbook: vi.fn(() => ({
-    sheetNames: ["BANG CHI TIET"],
+    sheetNames: ["VẬT TƯ NHÀ MÁY", "VẬT TƯ XE"],
     hasFactSheet: true,
+    missingSheetNames: [],
+    unreadableSheetNames: [],
+    sheetSummaries: [
+      { sheetName: "VẬT TƯ NHÀ MÁY", factRows: 1, amountSum: 100 },
+      { sheetName: "VẬT TƯ XE", factRows: 0, amountSum: 0 },
+    ],
     batchKind: "annual",
     suggestedPeriodYear: 2026,
     lines: [
