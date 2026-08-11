@@ -121,38 +121,3 @@ export function mapFactRow(
     quality_flags: qualityFlags,
   };
 }
-
-/** @deprecated Task 3 removes this — legacy positional BANG CHI TIET indices. */
-const LEGACY_CELL_INDICES: Partial<Record<SpendFactField, number>> = {
-  payment_date: 0,
-  party_code: 1,
-  party_name: 2,
-  uom: 3,
-  item_code: 4,
-  item_name: 5,
-  qty: 6,
-  unit_price: 7,
-  amount: 8,
-  description: 9,
-  plant_name: 11,
-  expense_code: 12,
-  recipient_name: 13,
-  received_date: 14,
-  payment_method: 15,
-  invoice: 16,
-  note: 17,
-};
-
-/** @deprecated Task 3 replaces with header-resolved field records in parse-workbook. */
-export function mapFactRowFromLegacyCells(
-  cells: unknown[],
-  periodYear: number,
-): SpendLineDraft | null {
-  const fields: Partial<Record<SpendFactField, unknown>> = {};
-  for (const [field, index] of Object.entries(LEGACY_CELL_INDICES)) {
-    if (index != null && index < cells.length) {
-      fields[field as SpendFactField] = cells[index];
-    }
-  }
-  return mapFactRow(fields, periodYear);
-}

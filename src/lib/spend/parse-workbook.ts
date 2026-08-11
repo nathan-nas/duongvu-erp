@@ -1,6 +1,11 @@
 import * as XLSX from "xlsx";
 import { classifyBatchKind } from "./classify-batch";
-import { mapFactRowFromLegacyCells } from "./map-fact-row";
+import {
+  hasFactHeaders,
+  resolveColumnMap,
+  type SpendFactField,
+} from "./header-aliases";
+import { mapFactRow } from "./map-fact-row";
 import { extractPeriodYearFromFilename } from "./period-year";
 import type { ParsedWorkbookPreview } from "./types";
 
@@ -17,12 +22,6 @@ function normalizeSheetName(name: string) {
     .toUpperCase()
     .replace(/Đ/g, "D")
     .replace(/\s+/g, "");
-}
-
-function hasExpectedHeaders(row: unknown[]) {
-  const headers = row.map((cell) => String(cell ?? "").normalize("NFC").toUpperCase());
-  return headers.some((header) => header.includes("THÀNH TIỀN")) &&
-    headers.some((header) => header.includes("NGÀY"));
 }
 
 function dateCellValue(cell: XLSX.CellObject | undefined, date1904: boolean) {
@@ -47,25 +46,39 @@ function parseRequiredSheet(
     header: 1,
     raw: true,
   });
-  const headerRowIndex = rows.slice(0, 10).findIndex(hasExpectedHeaders);
+  const headerRowIndex = rows.slice(0, 10).findIndex(hasFactHeaders);
   if (headerRowIndex < 0) return null;
 
+  const columnMap = resolveColumnMap(rows[headerRowIndex]);
   const range = XLSX.utils.decode_range(sheet["!ref"] ?? "A1");
-  const dataRows = rows.slice(headerRowIndex + 1).map((row, index) => {
-    const sheetRow = headerRowIndex + 1 + index;
-    const paymentDateCell = sheet[
-      XLSX.utils.encode_cell({ r: range.s.r + sheetRow, c: 0 })
-    ];
-    const receivedDateCell = sheet[
-      XLSX.utils.encode_cell({ r: range.s.r + sheetRow, c: 14 })
-    ];
-    const normalizedRow = [...row];
-    normalizedRow[0] = dateCellValue(paymentDateCell, date1904);
-    normalizedRow[14] = dateCellValue(receivedDateCell, date1904);
-    return normalizedRow;
-  });
-  const lines = dataRows
-    .map((row) => mapFactRowFromLegacyCells(row, periodYear))
+  const lines = rows
+    .slice(headerRowIndex + 1)
+    .map((row, index) => {
+      const sheetRow = headerRowIndex + 1 + index;
+      const fields: Partial<Record<SpendFactField, unknown>> = {};
+
+      for (const [field, columnIndex] of Object.entries(columnMap) as [
+        SpendFactField,
+        number,
+      ][]) {
+        const value = row[columnIndex];
+        if (value === undefined) continue;
+
+        if (field === "payment_date" || field === "received_date") {
+          const cell = sheet[
+            XLSX.utils.encode_cell({
+              r: range.s.r + sheetRow,
+              c: range.s.c + columnIndex,
+            })
+          ];
+          fields[field] = dateCellValue(cell, date1904);
+        } else {
+          fields[field] = value;
+        }
+      }
+
+      return mapFactRow(fields, periodYear);
+    })
     .filter((row): row is NonNullable<typeof row> => row !== null);
   const amountSum = lines.reduce(
     (sum, line) => sum + (line.amount ?? 0),
