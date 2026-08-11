@@ -1,3 +1,5 @@
+export type { SpendFactField } from "./header-aliases";
+
 export type BatchKind = "annual" | "period" | "unknown";
 
 export type SpendLineDraft = {
