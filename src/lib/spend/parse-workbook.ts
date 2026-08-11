@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
 import { classifyBatchKind } from "./classify-batch";
-import { mapFactRow } from "./map-fact-row";
+import { mapFactRowFromLegacyCells } from "./map-fact-row";
 import { extractPeriodYearFromFilename } from "./period-year";
 import type { ParsedWorkbookPreview } from "./types";
 
@@ -65,7 +65,7 @@ function parseRequiredSheet(
     return normalizedRow;
   });
   const lines = dataRows
-    .map((row) => mapFactRow(row, periodYear))
+    .map((row) => mapFactRowFromLegacyCells(row, periodYear))
     .filter((row): row is NonNullable<typeof row> => row !== null);
   const amountSum = lines.reduce(
     (sum, line) => sum + (line.amount ?? 0),
