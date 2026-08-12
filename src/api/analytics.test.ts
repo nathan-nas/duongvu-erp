@@ -12,7 +12,53 @@ vi.mock("@/lib/supabase/server", () => ({
   })),
 }));
 
-import { fetchSpendLinesPage } from "./analytics";
+import { fetchSpendAggregates, fetchSpendLinesPage } from "./analytics";
+
+describe("fetchSpendAggregates", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+  });
+
+  it("loads full party aggregates for KPI counts", async () => {
+    rpc.mockImplementation((name: string, args: { p_top?: number | null }) => {
+      if (name === "spend_agg_by_party" && args.p_top == null) {
+        return {
+          data: [
+            { label: "NCC01 — Nhà cung cấp A", amount: 100, count: 2 },
+            { label: "NCC02 — Nhà cung cấp B", amount: 50, count: 1 },
+          ],
+          error: null,
+        };
+      }
+      if (name === "spend_range_totals") {
+        return {
+          data: [{ amount_sum: 150, fact_rows: 3 }],
+          error: null,
+        };
+      }
+      return { data: [], error: null };
+    });
+
+    const result = await fetchSpendAggregates({
+      from: "2025-12-01",
+      to: "2025-12-31",
+    });
+
+    expect(rpc).toHaveBeenCalledWith("spend_agg_by_party", {
+      p_from: "2025-12-01",
+      p_to: "2025-12-31",
+      p_top: null,
+    });
+    expect(result?.partyAll).toEqual([
+      { label: "NCC01 — Nhà cung cấp A", amount: 100, count: 2 },
+      { label: "NCC02 — Nhà cung cấp B", amount: 50, count: 1 },
+    ]);
+  });
+});
 
 describe("fetchSpendLinesPage", () => {
   beforeEach(() => {

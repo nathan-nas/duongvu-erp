@@ -116,6 +116,7 @@ export async function fetchSpendAggregates(input: {
   month: SpendAggregate[];
   plantAll: SpendAggregate[];
   expenseAll: SpendAggregate[];
+  partyAll: SpendAggregate[];
   totals: SpendRangeTotals;
 } | null> {
   const supabase = await createClient();
@@ -126,16 +127,25 @@ export async function fetchSpendAggregates(input: {
 
   const params = { p_from: input.from, p_to: input.to };
 
-  const [plantTop, expenseTop, partyTop, month, plantAll, expenseAll, totals] =
-    await Promise.all([
-      supabase.rpc("spend_agg_by_plant", { ...params, p_top: 15 }),
-      supabase.rpc("spend_agg_by_expense", { ...params, p_top: 15 }),
-      supabase.rpc("spend_agg_by_party", { ...params, p_top: 15 }),
-      supabase.rpc("spend_agg_by_month", params),
-      supabase.rpc("spend_agg_by_plant", { ...params, p_top: null }),
-      supabase.rpc("spend_agg_by_expense", { ...params, p_top: null }),
-      supabase.rpc("spend_range_totals", params),
-    ]);
+  const [
+    plantTop,
+    expenseTop,
+    partyTop,
+    month,
+    plantAll,
+    expenseAll,
+    partyAll,
+    totals,
+  ] = await Promise.all([
+    supabase.rpc("spend_agg_by_plant", { ...params, p_top: 15 }),
+    supabase.rpc("spend_agg_by_expense", { ...params, p_top: 15 }),
+    supabase.rpc("spend_agg_by_party", { ...params, p_top: 15 }),
+    supabase.rpc("spend_agg_by_month", params),
+    supabase.rpc("spend_agg_by_plant", { ...params, p_top: null }),
+    supabase.rpc("spend_agg_by_expense", { ...params, p_top: null }),
+    supabase.rpc("spend_agg_by_party", { ...params, p_top: null }),
+    supabase.rpc("spend_range_totals", params),
+  ]);
 
   const totalsRow = Array.isArray(totals.data) ? totals.data[0] : totals.data;
 
@@ -146,6 +156,7 @@ export async function fetchSpendAggregates(input: {
     month: mapAggregateRows(month.data),
     plantAll: mapAggregateRows(plantAll.data),
     expenseAll: mapAggregateRows(expenseAll.data),
+    partyAll: mapAggregateRows(partyAll.data),
     totals: {
       amountSum: Number(totalsRow?.amount_sum) || 0,
       factRows: Number(totalsRow?.fact_rows) || 0,
