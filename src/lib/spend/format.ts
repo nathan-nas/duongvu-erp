@@ -16,7 +16,11 @@ export function formatViDate(iso: string | null): string {
   return `${day}/${month}/${year}`;
 }
 
-/** Composite code — name label (đối tác / hàng hóa). Must match SQL expressions. */
+/**
+ * Composite code — name label (đối tác / hàng hóa).
+ * Both sides: `mã — tên`. Only one side: that value alone (no `— — ` placeholder).
+ * Must match SQL spend_party_label / spend_item_label.
+ */
 export function formatCodeNameLabel(
   code: string | null | undefined,
   name: string | null | undefined,
@@ -24,7 +28,10 @@ export function formatCodeNameLabel(
   const trimmedCode = code?.trim() ?? "";
   const trimmedName = name?.trim() ?? "";
   if (trimmedCode === "" && trimmedName === "") return null;
-  return `${trimmedCode || "—"} — ${trimmedName || "—"}`;
+  if (trimmedCode !== "" && trimmedName !== "") {
+    return `${trimmedCode} — ${trimmedName}`;
+  }
+  return trimmedCode || trimmedName;
 }
 
 /** Composite đối tác label — must match SQL spend_agg_by_party / spend_lines_page. */
@@ -37,15 +44,10 @@ export function formatPartyLabel(
 
 /**
  * Hàng hóa label — must match SQL spend_item_label / spend_agg_items_for_party.
- * Both sides: `mã — tên`. Only one side: that value alone (no `— — ` placeholder).
  */
 export function formatItemLabel(
   itemCode: string | null | undefined,
   itemName: string | null | undefined,
 ): string | null {
-  const code = itemCode?.trim() ?? "";
-  const name = itemName?.trim() ?? "";
-  if (code === "" && name === "") return null;
-  if (code !== "" && name !== "") return `${code} — ${name}`;
-  return code || name;
+  return formatCodeNameLabel(itemCode, itemName);
 }

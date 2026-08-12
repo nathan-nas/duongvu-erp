@@ -27,23 +27,47 @@ export function localDateToIso(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+/** Parse dd/MM/yyyy (flexible day/month digits) to ISO YYYY-MM-DD. */
+export function parseViDateToIso(text: string): string | null {
+  const match = text.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return null;
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  const iso = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  return isIsoDate(iso) ? iso : null;
+}
+
+/** 1 Jan of `now`'s year → `now` (local calendar). */
+export function yearToDateRange(now: Date = new Date()): {
+  from: string;
+  to: string;
+} {
+  return {
+    from: `${now.getFullYear()}-01-01`,
+    to: localDateToIso(now),
+  };
+}
+
 export function parseAnalyticsDateRange(
   fromRaw: string | undefined,
   toRaw: string | undefined,
-  defaults: { min: string | null; max: string | null },
+  bounds: { min: string | null; max: string | null },
+  now: Date = new Date(),
 ):
   | { from: string; to: string; error: null }
   | { from: string | null; to: string | null; error: string } {
-  const from = fromRaw && isIsoDate(fromRaw) ? fromRaw : defaults.min;
-  const to = toRaw && isIsoDate(toRaw) ? toRaw : defaults.max;
-
-  if (!from || !to) {
+  if (!bounds.min || !bounds.max) {
     return {
       from: null,
       to: null,
       error: "Chưa có dữ liệu giao dịch.",
     };
   }
+
+  const ytd = yearToDateRange(now);
+  const from = fromRaw && isIsoDate(fromRaw) ? fromRaw : ytd.from;
+  const to = toRaw && isIsoDate(toRaw) ? toRaw : ytd.to;
 
   if (from > to) {
     return {
