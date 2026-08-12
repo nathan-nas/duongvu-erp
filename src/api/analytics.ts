@@ -127,16 +127,7 @@ export async function fetchSpendAggregates(input: {
 
   const params = { p_from: input.from, p_to: input.to };
 
-  const [
-    plantTop,
-    expenseTop,
-    partyTop,
-    month,
-    plantAll,
-    expenseAll,
-    partyAll,
-    totals,
-  ] = await Promise.all([
+  const results = await Promise.all([
     supabase.rpc("spend_agg_by_plant", { ...params, p_top: 15 }),
     supabase.rpc("spend_agg_by_expense", { ...params, p_top: 15 }),
     supabase.rpc("spend_agg_by_party", { ...params, p_top: 15 }),
@@ -146,6 +137,26 @@ export async function fetchSpendAggregates(input: {
     supabase.rpc("spend_agg_by_party", { ...params, p_top: null }),
     supabase.rpc("spend_range_totals", params),
   ]);
+
+  if (results.some((result) => result.error)) {
+    if (process.env.NODE_ENV === "development") {
+      for (const result of results) {
+        if (result.error) console.error("fetchSpendAggregates", result.error);
+      }
+    }
+    return null;
+  }
+
+  const [
+    plantTop,
+    expenseTop,
+    partyTop,
+    month,
+    plantAll,
+    expenseAll,
+    partyAll,
+    totals,
+  ] = results;
 
   const totalsRow = Array.isArray(totals.data) ? totals.data[0] : totals.data;
 

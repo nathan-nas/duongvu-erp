@@ -31,9 +31,10 @@ import { cn } from "@/lib/utils";
 
 const DETAIL_ANCHOR_ID = "spend-detail-panel";
 
-/** Invalidates in-flight party/lines loads when a newer request starts. */
+/** Invalidates in-flight party/lines/kpi-group loads when a newer request starts. */
 let linesRequestSeq = 0;
 let partyItemsRequestSeq = 0;
+let kpiGroupsRequestSeq = 0;
 
 function scrollToDetail() {
   setTimeout(() => {
@@ -373,7 +374,9 @@ export function AnalyticsDashboard({
   const refreshKpiGroups = useCallback(
     async (filterField: KpiGroupFilterField) => {
       if (!from || !to) return;
+      const requestId = ++kpiGroupsRequestSeq;
       const series = await fetchSpendAggregates({ from, to });
+      if (requestId !== kpiGroupsRequestSeq) return;
       if (!series) return;
       const groups =
         filterField === "plant_name"
@@ -407,6 +410,7 @@ export function AnalyticsDashboard({
   const handleClose = useCallback(() => {
     linesRequestSeq += 1;
     partyItemsRequestSeq += 1;
+    kpiGroupsRequestSeq += 1;
     setDrill(null);
     setPageLines([]);
     setPageTotalCount(0);

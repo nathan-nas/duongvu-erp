@@ -58,6 +58,22 @@ describe("fetchSpendAggregates", () => {
       { label: "NCC02 — Nhà cung cấp B", amount: 50, count: 1 },
     ]);
   });
+
+  it("returns null when an aggregate RPC fails", async () => {
+    rpc.mockImplementation((name: string) => {
+      if (name === "spend_agg_by_plant") {
+        return { data: null, error: { message: "db error" } };
+      }
+      return { data: [], error: null };
+    });
+
+    const result = await fetchSpendAggregates({
+      from: "2025-12-01",
+      to: "2025-12-31",
+    });
+
+    expect(result).toBeNull();
+  });
 });
 
 describe("fetchSpendLinesPage", () => {
