@@ -49,6 +49,16 @@ export function yearToDateRange(now: Date = new Date()): {
   };
 }
 
+/** Prefer later ISO date. */
+function maxIso(a: string, b: string): string {
+  return a >= b ? a : b;
+}
+
+/** Prefer earlier ISO date. */
+function minIso(a: string, b: string): string {
+  return a <= b ? a : b;
+}
+
 export function parseAnalyticsDateRange(
   fromRaw: string | undefined,
   toRaw: string | undefined,
@@ -66,8 +76,16 @@ export function parseAnalyticsDateRange(
   }
 
   const ytd = yearToDateRange(now);
-  const from = fromRaw && isIsoDate(fromRaw) ? fromRaw : ytd.from;
-  const to = toRaw && isIsoDate(toRaw) ? toRaw : ytd.to;
+  const from =
+    fromRaw && isIsoDate(fromRaw)
+      ? fromRaw
+      : maxIso(ytd.from, bounds.min);
+  const to =
+    toRaw && isIsoDate(toRaw) ? toRaw : minIso(ytd.to, bounds.max);
+
+  if (!(fromRaw && isIsoDate(fromRaw)) && !(toRaw && isIsoDate(toRaw)) && from > to) {
+    return { from: bounds.min, to: bounds.max, error: null };
+  }
 
   if (from > to) {
     return {

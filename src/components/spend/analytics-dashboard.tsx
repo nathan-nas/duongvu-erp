@@ -7,6 +7,7 @@ import NumberFlow from "@number-flow/react";
 import { BarChart3, Maximize2, Minimize2 } from "lucide-react";
 import {
   fetchPartyItemAggregates,
+  fetchSpendAggregates,
   fetchSpendLinesPage,
   type AnalyticsLine,
   type SpendFilterKind,
@@ -324,6 +325,16 @@ export function AnalyticsDashboard({
     });
   }, [loadLines]);
 
+  const resetPagedLines = useCallback(() => {
+    linesRequestSeq += 1;
+    setPageLines([]);
+    setPageTotalCount(0);
+    setPageTotalAmount(0);
+    setPageError(null);
+    setPageLoading(false);
+    setPageLoadingMore(false);
+  }, []);
+
   const handleKpiGroupClick = useCallback(
     (label: string) => {
       setDrill((prev) => {
@@ -332,17 +343,12 @@ export function AnalyticsDashboard({
         if (nextSelected) {
           void loadLines(prev.filterField, label, 0, false);
         } else {
-          linesRequestSeq += 1;
-          setPageLines([]);
-          setPageTotalCount(0);
-          setPageTotalAmount(0);
-          setPageError(null);
-          setPageLoading(false);
+          resetPagedLines();
         }
         return { ...prev, selectedGroup: nextSelected };
       });
     },
-    [loadLines],
+    [loadLines, resetPagedLines],
   );
 
   const openGroupsDrill = useCallback(
@@ -352,12 +358,7 @@ export function AnalyticsDashboard({
       groups: SpendAggregate[];
       filterField: KpiGroupFilterField;
     }) => {
-      linesRequestSeq += 1;
-      setPageLines([]);
-      setPageTotalCount(0);
-      setPageTotalAmount(0);
-      setPageError(null);
-      setPageLoading(false);
+      resetPagedLines();
       setDrill({
         kind: "groups",
         ...config,
@@ -366,7 +367,28 @@ export function AnalyticsDashboard({
       });
       scrollToDetail();
     },
-    [],
+    [resetPagedLines],
+  );
+
+  const refreshKpiGroups = useCallback(
+    async (filterField: KpiGroupFilterField) => {
+      if (!from || !to) return;
+      const series = await fetchSpendAggregates({ from, to });
+      if (!series) return;
+      const groups =
+        filterField === "plant_name"
+          ? series.plantAll
+          : filterField === "expense_code"
+            ? series.expenseAll
+            : series.partyAll;
+      setDrill((prev) => {
+        if (!prev || prev.kind !== "groups" || prev.filterField !== filterField) {
+          return prev;
+        }
+        return { ...prev, groups };
+      });
+    },
+    [from, to],
   );
 
   const handleMonthClick = useCallback(
@@ -390,6 +412,8 @@ export function AnalyticsDashboard({
     setPageTotalCount(0);
     setPageTotalAmount(0);
     setPageError(null);
+    setPageLoading(false);
+    setPageLoadingMore(false);
   }, []);
 
   function toggleExpand(card: NonNullable<ExpandedCard>, title: string) {
@@ -544,6 +568,7 @@ export function AnalyticsDashboard({
                       0,
                       false,
                     );
+                    void refreshKpiGroups(drill.filterField);
                   }}
                   onClose={handleClose}
                 />

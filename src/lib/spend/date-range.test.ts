@@ -61,6 +61,21 @@ describe("parseAnalyticsDateRange", () => {
     });
   });
 
+  it("clamps YTD defaults into data bounds", () => {
+    expect(
+      parseAnalyticsDateRange(
+        undefined,
+        undefined,
+        { min: "2025-03-01", max: "2025-11-30" },
+        now,
+      ),
+    ).toEqual({
+      from: "2025-03-01",
+      to: "2025-11-30",
+      error: null,
+    });
+  });
+
   it("uses provided ISO params", () => {
     expect(
       parseAnalyticsDateRange("2025-12-01", "2025-12-31", bounds, now),
