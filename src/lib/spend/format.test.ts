@@ -33,10 +33,10 @@ describe("formatPartyLabel", () => {
     expect(formatPartyLabel("N001", "Công ty X")).toBe("N001 — Công ty X");
   });
 
-  it("uses em dash placeholder when one side is missing", () => {
-    expect(formatPartyLabel("N001", null)).toBe("N001 — —");
-    expect(formatPartyLabel(null, "Công ty X")).toBe("— — Công ty X");
-    expect(formatPartyLabel("  ", "Công ty X")).toBe("— — Công ty X");
+  it("shows only the present side when the other is blank", () => {
+    expect(formatPartyLabel("N001", null)).toBe("N001");
+    expect(formatPartyLabel(null, "Công ty X")).toBe("Công ty X");
+    expect(formatPartyLabel("  ", "Công ty X")).toBe("Công ty X");
   });
 
   it("returns null when both sides are blank", () => {

@@ -17,6 +17,7 @@ const emptySeries = {
   month: [] as SpendAggregate[],
   plantAll: [] as SpendAggregate[],
   expenseAll: [] as SpendAggregate[],
+  partyAll: [] as SpendAggregate[],
   totals: { amountSum: 0, factRows: 0 },
 };
 
@@ -58,6 +59,7 @@ export default async function AnalyticsPage({
         monthData={series.month}
         plantAll={series.plantAll}
         expenseAll={series.expenseAll}
+        partyAll={series.partyAll}
       />
     </main>
   );
