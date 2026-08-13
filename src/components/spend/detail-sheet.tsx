@@ -1,10 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ArrowUpDown, Columns3, Pencil, Plus, Trash2, X } from "lucide-react";
-import { TableVirtuoso } from "react-virtuoso";
+import { useMemo, useState, type ReactNode } from "react";
+import { Pencil, Plus, Trash2, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableTrailingColumn,
+} from "@/components/ui/data-table";
 import type { AnalyticsLine } from "@/api/analytics";
 import type { SpendAggregate } from "@/lib/spend/aggregations";
 import { formatVnd, formatViDate } from "@/lib/spend/format";
@@ -16,9 +20,6 @@ import {
 import { cn } from "@/lib/utils";
 import { SpendLineDeleteDialog } from "./spend-line-delete-dialog";
 import { SpendLineFormDialog } from "./spend-line-form-dialog";
-
-const VIRTUALIZE_MIN_ROWS = 40;
-const VIRTUAL_TABLE_HEIGHT = 560;
 
 type LinesProps = {
   title: string;
@@ -59,10 +60,6 @@ type Props = LinesProps | GroupsProps;
 type GroupSortKey = "label" | "amount" | "count";
 type SortDir = "asc" | "desc";
 
-const DEFAULT_VISIBLE = new Set<SpendLineColumnKey>(
-  SPEND_LINE_COLUMNS.map((column) => column.key),
-);
-
 function compareLine(
   a: AnalyticsLine,
   b: AnalyticsLine,
@@ -77,161 +74,84 @@ function compareLine(
   return String(av).localeCompare(String(bv), "vi");
 }
 
-function SortButton({
-  label,
-  active,
-  onClick,
-  align,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-  align?: "right";
-}) {
-  return (
-    <th
-      className={cn(
-        "whitespace-nowrap px-4 py-3 text-xs font-semibold text-muted-foreground select-none",
-        align === "right" && "text-right",
-      )}
-    >
-      <button
-        type="button"
-        className="inline-flex items-center gap-1 hover:text-foreground"
-        onClick={onClick}
-      >
-        {label}
-        <ArrowUpDown
-          className={cn(
-            "size-3",
-            active ? "text-foreground" : "text-muted-foreground/40",
-          )}
-        />
-      </button>
-    </th>
-  );
-}
-
-function renderLineCell(
+function lineCellContent(
   line: AnalyticsLine,
   key: SpendLineColumnKey,
   rowNumber: number,
-) {
+): ReactNode {
   switch (key) {
     case "row_number":
       return (
-        <td
-          key={key}
-          className="whitespace-nowrap px-4 py-2.5 text-right text-xs tabular-nums"
-        >
-          {rowNumber.toLocaleString("vi-VN")}
-        </td>
+        <span className="tabular-nums">{rowNumber.toLocaleString("vi-VN")}</span>
       );
     case "payment_date":
-      return (
-        <td key={key} className="whitespace-nowrap px-4 py-2.5 text-xs">
-          {formatViDate(line.payment_date)}
-        </td>
-      );
+      return formatViDate(line.payment_date);
     case "party_name":
       return (
-        <td
-          key={key}
-          className="max-w-[180px] truncate px-4 py-2.5 text-xs"
-          title={line.party_name ?? undefined}
-        >
-          <div className="font-medium">{line.party_name ?? "—"}</div>
-        </td>
+        <div className="truncate font-medium" title={line.party_name ?? undefined}>
+          {line.party_name ?? "—"}
+        </div>
       );
     case "received_date":
-      return (
-        <td key={key} className="whitespace-nowrap px-4 py-2.5 text-xs">
-          {line.received_date ? formatViDate(line.received_date) : "—"}
-        </td>
-      );
+      return line.received_date ? formatViDate(line.received_date) : "—";
     case "item_name":
       return (
-        <td
-          key={key}
-          className="max-w-[200px] truncate px-4 py-2.5 text-xs"
-          title={line.item_name ?? undefined}
-        >
-          <div>{line.item_name ?? "—"}</div>
-        </td>
+        <div className="truncate" title={line.item_name ?? undefined}>
+          {line.item_name ?? "—"}
+        </div>
       );
     case "uom":
-      return (
-        <td key={key} className="whitespace-nowrap px-4 py-2.5 text-xs">
-          {line.uom ?? "—"}
-        </td>
-      );
+      return line.uom ?? "—";
     case "qty":
-      return (
-        <td
-          key={key}
-          className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums"
-        >
-          {line.qty != null ? line.qty.toLocaleString("vi-VN") : "—"}
-        </td>
-      );
+      return line.qty != null ? line.qty.toLocaleString("vi-VN") : "—";
     case "unit_price":
-      return (
-        <td
-          key={key}
-          className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums"
-        >
-          {line.unit_price != null ? formatVnd(line.unit_price) : "—"}
-        </td>
-      );
+      return line.unit_price != null ? formatVnd(line.unit_price) : "—";
     case "amount":
       return (
-        <td
-          key={key}
-          className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums font-semibold"
-        >
+        <span className="font-semibold">
           {line.amount != null ? formatVnd(line.amount) : "—"}
-        </td>
+        </span>
       );
     case "description":
       return (
-        <td
-          key={key}
-          className="max-w-[260px] truncate px-4 py-2.5 text-xs"
-          title={line.description ?? undefined}
-        >
+        <span className="truncate" title={line.description ?? undefined}>
           {line.description ?? "—"}
-        </td>
+        </span>
       );
     case "recipient_name":
       return (
-        <td
-          key={key}
-          className="max-w-[180px] truncate px-4 py-2.5 text-xs"
-          title={line.recipient_name ?? undefined}
-        >
+        <span className="truncate" title={line.recipient_name ?? undefined}>
           {line.recipient_name ?? "—"}
-        </td>
+        </span>
       );
     case "plant_name":
-      return (
-        <td key={key} className="whitespace-nowrap px-4 py-2.5">
-          {line.plant_name ? (
-            <span className="inline-flex rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-              {line.plant_name}
-            </span>
-          ) : (
-            "—"
-          )}
-        </td>
+      return line.plant_name ? (
+        <span className="inline-flex rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+          {line.plant_name}
+        </span>
+      ) : (
+        "—"
       );
     case "invoice":
-      return (
-        <td key={key} className="whitespace-nowrap px-4 py-2.5 text-xs">
-          {line.invoice ?? "—"}
-        </td>
-      );
+      return line.invoice ?? "—";
   }
 }
+
+const LINE_DEFAULT_WIDTHS: Partial<Record<SpendLineColumnKey, number>> = {
+  row_number: 64,
+  payment_date: 120,
+  party_name: 160,
+  received_date: 120,
+  item_name: 180,
+  uom: 72,
+  qty: 88,
+  unit_price: 110,
+  amount: 120,
+  description: 200,
+  recipient_name: 140,
+  plant_name: 100,
+  invoice: 100,
+};
 
 export function DetailSheet(props: Props) {
   const { title, totalAmount, onClose } = props;
@@ -244,21 +164,12 @@ export function DetailSheet(props: Props) {
   const [lineSortKey, setLineSortKey] = useState<SpendLineSortKey | null>(null);
   const [groupSortKey, setGroupSortKey] = useState<GroupSortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
-  const [visibleKeys, setVisibleKeys] = useState<Set<SpendLineColumnKey>>(
-    () => new Set(DEFAULT_VISIBLE),
-  );
-  const [columnPickerOpen, setColumnPickerOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<
     { kind: "create" } | { kind: "edit"; line: AnalyticsLine } | null
   >(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteLine, setDeleteLine] = useState<AnalyticsLine | null>(null);
-
-  const visibleColumns = useMemo(
-    () => SPEND_LINE_COLUMNS.filter((col) => visibleKeys.has(col.key)),
-    [visibleKeys],
-  );
 
   const sortedLines = useMemo(() => {
     if (isGroups || !props.lines) return [];
@@ -277,35 +188,24 @@ export function DetailSheet(props: Props) {
     return sortDir === "desc" ? sorted.reverse() : sorted;
   }, [isGroups, props, groupSortKey, sortDir]);
 
-  function handleLineSort(key: SpendLineSortKey) {
-    if (lineSortKey === key) {
+  function handleLineSort(key: string) {
+    const sortKey = key as SpendLineSortKey;
+    if (lineSortKey === sortKey) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
-      setLineSortKey(key);
+      setLineSortKey(sortKey);
       setSortDir("asc");
     }
   }
 
-  function handleGroupSort(key: GroupSortKey) {
-    if (groupSortKey === key) {
+  function handleGroupSort(key: string) {
+    const sortKey = key as GroupSortKey;
+    if (groupSortKey === sortKey) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
-      setGroupSortKey(key);
-      setSortDir(key === "amount" || key === "count" ? "desc" : "asc");
+      setGroupSortKey(sortKey);
+      setSortDir(sortKey === "amount" || sortKey === "count" ? "desc" : "asc");
     }
-  }
-
-  function toggleColumn(key: SpendLineColumnKey) {
-    setVisibleKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        if (next.size <= 1) return prev;
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
   }
 
   const lineCountLabel = !isGroups
@@ -316,66 +216,63 @@ export function DetailSheet(props: Props) {
     ? `${formatVnd(totalAmount)} — ${props.groups!.length.toLocaleString("vi-VN")} nhóm`
     : `${formatVnd(totalAmount)} — ${lineCountLabel.toLocaleString("vi-VN")} dòng`;
 
-  const virtualizeGroups =
-    isGroups && sortedGroups.length >= VIRTUALIZE_MIN_ROWS;
-  const virtualizeLines =
-    !isGroups && sortedLines.length >= VIRTUALIZE_MIN_ROWS;
-  const scrollInParent = !virtualizeGroups && !virtualizeLines;
-
-  const groupHeader = (
-    <tr>
-      <SortButton
-        label={props.groupLabel ?? "Nhóm"}
-        active={groupSortKey === "label"}
-        onClick={() => handleGroupSort("label")}
-      />
-      <SortButton
-        label="Số dòng"
-        active={groupSortKey === "count"}
-        onClick={() => handleGroupSort("count")}
-        align="right"
-      />
-      <SortButton
-        label="Tổng chi"
-        active={groupSortKey === "amount"}
-        onClick={() => handleGroupSort("amount")}
-        align="right"
-      />
-    </tr>
+  const lineColumns = useMemo<DataTableColumn<AnalyticsLine>[]>(
+    () =>
+      SPEND_LINE_COLUMNS.map((col) => ({
+        id: col.key,
+        label: col.label,
+        align: col.align,
+        defaultWidth: LINE_DEFAULT_WIDTHS[col.key] ?? 140,
+        minWidth: col.key === "row_number" ? 48 : 64,
+        sortable: col.key !== "row_number",
+        reorderable: col.key !== "row_number",
+        hideable: true,
+        cell: (line, index) => lineCellContent(line, col.key, index + 1),
+      })),
+    [],
   );
 
-  const lineHeader = (
-    <tr>
-      {visibleColumns.map((col) => (
-        col.key === "row_number" ? (
-          <th
-            key={col.key}
-            className="whitespace-nowrap px-4 py-3 text-right text-xs font-semibold text-muted-foreground"
-          >
-            {col.label}
-          </th>
-        ) : (
-          <SortButton
-            key={col.key}
-            label={col.label}
-            active={lineSortKey === col.key}
-            onClick={() => handleLineSort(col.key as SpendLineSortKey)}
-            align={col.align}
-          />
-        )
-      ))}
-      {editable ? (
-        <th className="whitespace-nowrap px-4 py-3 text-right text-xs font-semibold text-muted-foreground">
-          Thao tác
-        </th>
-      ) : null}
-    </tr>
+  const groupColumns = useMemo<DataTableColumn<SpendAggregate>[]>(
+    () => [
+      {
+        id: "label",
+        label: props.groupLabel ?? "Nhóm",
+        defaultWidth: 220,
+        sortable: true,
+        cell: (group) => (
+          <span className="font-medium">{group.label}</span>
+        ),
+      },
+      {
+        id: "count",
+        label: "Số dòng",
+        align: "right",
+        defaultWidth: 100,
+        sortable: true,
+        cell: (group) => group.count.toLocaleString("vi-VN"),
+      },
+      {
+        id: "amount",
+        label: "Tổng chi",
+        align: "right",
+        defaultWidth: 140,
+        sortable: true,
+        cell: (group) => (
+          <span className="font-semibold">{formatVnd(group.amount)}</span>
+        ),
+      },
+    ],
+    [props.groupLabel],
   );
 
-  function renderLineActions(line: AnalyticsLine) {
-    if (!editable) return null;
-    return (
-      <td className="whitespace-nowrap px-2 py-1.5 text-right">
+  const trailingColumn = useMemo<
+    DataTableTrailingColumn<AnalyticsLine> | undefined
+  >(() => {
+    if (!editable) return undefined;
+    return {
+      label: "Thao tác",
+      width: 96,
+      cell: (line) => (
         <div className="inline-flex items-center gap-0.5">
           <Button
             type="button"
@@ -404,9 +301,9 @@ export function DetailSheet(props: Props) {
             <Trash2 className="size-3.5" />
           </Button>
         </div>
-      </td>
-    );
-  }
+      ),
+    };
+  }, [editable]);
 
   function handleMutated() {
     props.onLinesChanged?.();
@@ -414,266 +311,123 @@ export function DetailSheet(props: Props) {
 
   return (
     <Card className="motion-enter shadow-sm">
-      <CardHeader className="flex flex-row items-start justify-between gap-2">
-        <div>
-          <CardTitle className="text-base">{title}</CardTitle>
-          <p className="text-sm text-muted-foreground">{subtitle}</p>
-        </div>
-        <div className="flex items-center gap-1">
-          {editable ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setFormMode({ kind: "create" });
-                setFormOpen(true);
-              }}
-            >
-              <Plus className="size-4" />
-              Thêm dòng
-            </Button>
-          ) : null}
-          {!isGroups && (
-            <div className="relative">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                aria-expanded={columnPickerOpen}
-                aria-label="Chọn cột hiển thị"
-                onClick={() => setColumnPickerOpen((open) => !open)}
-              >
-                <Columns3 className="size-4" />
-              </Button>
-              {columnPickerOpen && (
-                <div className="absolute right-0 z-20 mt-1 w-52 rounded-md border bg-popover p-3 shadow-md duration-150 data-open:animate-in">
-                  <p className="mb-2 text-xs font-medium text-muted-foreground">
-                    Cột hiển thị
-                  </p>
-                  <ul className="grid gap-2">
-                    {SPEND_LINE_COLUMNS.map((col) => (
-                      <li key={col.key}>
-                        <label className="flex cursor-pointer items-center gap-2 text-sm">
-                          <input
-                            type="checkbox"
-                            className="size-3.5 accent-primary"
-                            checked={visibleKeys.has(col.key)}
-                            onChange={() => toggleColumn(col.key)}
-                          />
-                          {col.label}
-                        </label>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+      {isGroups ? (
+        <DataTable.Root tableId="spend_groups" columns={groupColumns}>
+          <CardHeader className="flex flex-row items-start justify-between gap-2">
+            <div>
+              <CardTitle className="text-base">{title}</CardTitle>
+              <p className="text-sm text-muted-foreground">{subtitle}</p>
             </div>
-          )}
-          {showClose ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              aria-label="Đóng"
-            >
-              <X className="size-4" />
-            </Button>
-          ) : null}
-        </div>
-      </CardHeader>
-      <CardContent
-        className={cn(
-          !isGroups && "overflow-x-auto",
-          scrollInParent && "max-h-[600px] overflow-auto",
-        )}
-      >
-        {!isGroups && props.loading && (
-          <p className="mb-3 text-sm text-muted-foreground" aria-live="polite">
-            Đang tải…
-          </p>
-        )}
-        {!isGroups && props.error && (
-          <p className="mb-3 text-sm text-destructive">{props.error}</p>
-        )}
-        {isGroups && props.loading && (
-          <p className="mb-3 text-sm text-muted-foreground" aria-live="polite">
-            Đang tải…
-          </p>
-        )}
-        {isGroups && props.error && (
-          <p className="mb-3 text-sm text-destructive">{props.error}</p>
-        )}
-        {isGroups ? (
-          virtualizeGroups ? (
-            <TableVirtuoso
-              style={{ height: VIRTUAL_TABLE_HEIGHT }}
-              data={sortedGroups}
-              className="text-sm"
-              fixedHeaderContent={() => groupHeader}
-              itemContent={(_index, group) => (
-                <>
-                  <td className="px-4 py-2.5 text-xs font-medium">
-                    {group.label}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums">
-                    {group.count.toLocaleString("vi-VN")}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums font-semibold">
-                    {formatVnd(group.amount)}
-                  </td>
-                </>
-              )}
-              components={{
-                Table: ({ style, ...tableProps }) => (
-                  <table
-                    {...tableProps}
-                    className="w-full text-left text-sm"
-                    style={style}
-                  />
-                ),
-                TableHead: (headProps) => (
-                  <thead
-                    {...headProps}
-                    className="border-b bg-muted/90 backdrop-blur"
-                  />
-                ),
-                TableRow: (rowProps) => {
-                  const index = Number(
-                    (rowProps as { "data-index"?: number })["data-index"],
-                  );
-                  const group = Number.isFinite(index)
-                    ? sortedGroups[index]
-                    : undefined;
-                  const selected =
-                    group != null && selectedGroupLabel === group.label;
-                  return (
-                    <tr
-                      {...rowProps}
-                      className={cn(
-                        "hover:bg-muted/30",
-                        onGroupClick && "cursor-pointer",
-                        selected && "bg-primary/10",
-                      )}
-                      onClick={
-                        onGroupClick && group
-                          ? () => onGroupClick(group.label)
-                          : undefined
-                      }
-                    />
-                  );
-                },
-              }}
-            />
-          ) : (
-            <table className="w-full text-left text-sm">
-              <thead className="sticky top-0 z-10 border-b bg-muted/90 backdrop-blur">
-                {groupHeader}
-              </thead>
-              <tbody className="divide-y">
-                {sortedGroups.map((group) => {
-                  const selected = selectedGroupLabel === group.label;
-                  return (
-                    <tr
-                      key={group.label}
-                      className={cn(
-                        "hover:bg-muted/30",
-                        onGroupClick && "cursor-pointer",
-                        selected && "bg-primary/10",
-                      )}
-                      onClick={
-                        onGroupClick
-                          ? () => onGroupClick(group.label)
-                          : undefined
-                      }
-                    >
-                      <td className="px-4 py-2.5 text-xs font-medium">
-                        {group.label}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums">
-                        {group.count.toLocaleString("vi-VN")}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-2.5 text-xs text-right tabular-nums font-semibold">
-                        {formatVnd(group.amount)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )
-        ) : (
-          <>
-            {virtualizeLines ? (
-              <TableVirtuoso
-                style={{ height: VIRTUAL_TABLE_HEIGHT }}
-                data={sortedLines}
-                className="text-sm"
-                fixedHeaderContent={() => lineHeader}
-                itemContent={(index, line) => (
-                  <>
-                    {visibleColumns.map((col) =>
-                      renderLineCell(line, col.key, index + 1),
-                    )}
-                    {renderLineActions(line)}
-                  </>
-                )}
-                components={{
-                  Table: ({ style, ...tableProps }) => (
-                    <table
-                      {...tableProps}
-                      className="min-w-[1800px] w-full text-left text-sm"
-                      style={style}
-                    />
-                  ),
-                  TableHead: (headProps) => (
-                    <thead
-                      {...headProps}
-                      className="border-b bg-muted/90 backdrop-blur"
-                    />
-                  ),
-                  TableRow: (rowProps) => (
-                    <tr {...rowProps} className="hover:bg-muted/30" />
-                  ),
-                }}
-              />
-            ) : (
-              <table className="min-w-[1800px] w-full text-left text-sm">
-                <thead className="sticky top-0 z-10 border-b bg-muted/90 backdrop-blur">
-                  {lineHeader}
-                </thead>
-                <tbody className="divide-y">
-                  {sortedLines.map((line, index) => (
-                    <tr key={line.id} className="hover:bg-muted/30">
-                      {visibleColumns.map((col) =>
-                        renderLineCell(line, col.key, index + 1),
-                      )}
-                      {renderLineActions(line)}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="flex items-center gap-1">
+              <DataTable.ColumnPicker />
+              {showClose ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onClose}
+                  aria-label="Đóng"
+                >
+                  <X className="size-4" />
+                </Button>
+              ) : null}
+            </div>
+          </CardHeader>
+          <CardContent className="max-h-[600px] overflow-auto">
+            {props.loading && (
+              <p className="mb-3 text-sm text-muted-foreground" aria-live="polite">
+                Đang tải…
+              </p>
             )}
-          </>
-        )}
-      </CardContent>
+            {props.error && (
+              <p className="mb-3 text-sm text-destructive">{props.error}</p>
+            )}
+            <DataTable.Table
+              rows={sortedGroups}
+              getRowId={(g) => g.label}
+              sortKey={groupSortKey}
+              sortDir={sortDir}
+              onSort={handleGroupSort}
+              onRowClick={
+                onGroupClick ? (group) => onGroupClick(group.label) : undefined
+              }
+              rowClassName={(group) =>
+                cn(selectedGroupLabel === group.label && "bg-primary/10")
+              }
+            />
+          </CardContent>
+        </DataTable.Root>
+      ) : (
+        <DataTable.Root tableId="spend_lines" columns={lineColumns}>
+          <CardHeader className="flex flex-row items-start justify-between gap-2">
+            <div>
+              <CardTitle className="text-base">{title}</CardTitle>
+              <p className="text-sm text-muted-foreground">{subtitle}</p>
+            </div>
+            <div className="flex items-center gap-1">
+              {editable ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setFormMode({ kind: "create" });
+                    setFormOpen(true);
+                  }}
+                >
+                  <Plus className="size-4" />
+                  Thêm dòng
+                </Button>
+              ) : null}
+              <DataTable.ColumnPicker />
+              {showClose ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onClose}
+                  aria-label="Đóng"
+                >
+                  <X className="size-4" />
+                </Button>
+              ) : null}
+            </div>
+          </CardHeader>
+          <CardContent className="max-h-[600px] overflow-x-auto overflow-y-auto">
+            {props.loading && (
+              <p className="mb-3 text-sm text-muted-foreground" aria-live="polite">
+                Đang tải…
+              </p>
+            )}
+            {props.error && (
+              <p className="mb-3 text-sm text-destructive">{props.error}</p>
+            )}
+            <DataTable.Table
+              rows={sortedLines}
+              getRowId={(line) => line.id}
+              sortKey={lineSortKey}
+              sortDir={sortDir}
+              onSort={handleLineSort}
+              trailingColumn={trailingColumn}
+            />
+          </CardContent>
 
-      {editable ? (
-        <>
-          <SpendLineFormDialog
-            open={formOpen}
-            mode={formMode}
-            onOpenChange={setFormOpen}
-            onSaved={handleMutated}
-          />
-          <SpendLineDeleteDialog
-            open={deleteOpen}
-            line={deleteLine}
-            onOpenChange={setDeleteOpen}
-            onDeleted={handleMutated}
-          />
-        </>
-      ) : null}
+          {editable ? (
+            <>
+              <SpendLineFormDialog
+                open={formOpen}
+                mode={formMode}
+                onOpenChange={setFormOpen}
+                onSaved={handleMutated}
+              />
+              <SpendLineDeleteDialog
+                open={deleteOpen}
+                line={deleteLine}
+                onOpenChange={setDeleteOpen}
+                onDeleted={handleMutated}
+              />
+            </>
+          ) : null}
+        </DataTable.Root>
+      )}
     </Card>
   );
 }

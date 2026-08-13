@@ -10,6 +10,7 @@ Server-side API for the authenticated app (Next.js Server Actions).
 | `analytics.ts` | `fetchSpendDateBounds`, `fetchSpendAggregates`, `fetchSpendLinesPage`, `fetchSpendLines` — date-range SQL RPC wrappers. Prefer **paged** `fetchSpendLinesPage` for UI. |
 | `data-management.ts` | List batches; preview/delete by date range; delete import batch (+ prune empty). |
 | `spend-lines.ts` | Create / update / delete single spend lines (manual batch support). |
+| `table-prefs.ts` | Load/upsert per-user table column prefs (`user_table_pref`). |
 
 ## Conventions
 
