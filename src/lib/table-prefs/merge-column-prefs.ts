@@ -55,3 +55,21 @@ export function mergeColumnPrefs(
 
   return { columnOrder, visibleIds, widths };
 }
+
+/** Move `fromId` to the position currently occupied by `toId`. */
+export function reorderColumnOrder(
+  order: readonly string[],
+  fromId: string,
+  toId: string,
+): string[] {
+  if (fromId === toId) return [...order];
+  const next = [...order];
+  const from = next.indexOf(fromId);
+  const to = next.indexOf(toId);
+  if (from < 0 || to < 0) return [...order];
+  next.splice(from, 1);
+  // After removal, indices after `from` shift left by one.
+  const insertAt = from < to ? to - 1 : to;
+  next.splice(insertAt, 0, fromId);
+  return next;
+}

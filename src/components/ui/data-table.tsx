@@ -10,13 +10,18 @@ import {
   useState,
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
+  type MutableRefObject,
   type ReactNode,
 } from "react";
 import { ArrowUpDown, Columns3 } from "lucide-react";
 import { TableVirtuoso } from "react-virtuoso";
 import { getTableColumnPrefs, upsertTableColumnPrefs } from "@/api/table-prefs";
 import { Button } from "@/components/ui/button";
-import { clampWidth, mergeColumnPrefs } from "@/lib/table-prefs/merge-column-prefs";
+import {
+  clampWidth,
+  mergeColumnPrefs,
+  reorderColumnOrder,
+} from "@/lib/table-prefs/merge-column-prefs";
 import type {
   TableColumnPrefPayload,
   TablePrefId,
@@ -74,19 +79,37 @@ function useDebouncedSave(
   tableId: TablePrefId,
   prefs: TableColumnPrefPayload,
   enabled: boolean,
+  skipNextSaveRef: MutableRefObject<boolean>,
 ) {
-  const first = useRef(true);
+  const pendingRef = useRef<{
+    tableId: TablePrefId;
+    prefs: TableColumnPrefPayload;
+  } | null>(null);
+
   useEffect(() => {
     if (!enabled) return;
-    if (first.current) {
-      first.current = false;
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      pendingRef.current = null;
       return;
     }
+    pendingRef.current = { tableId, prefs };
     const handle = window.setTimeout(() => {
+      pendingRef.current = null;
       void upsertTableColumnPrefs(tableId, prefs);
     }, SAVE_DEBOUNCE_MS);
     return () => window.clearTimeout(handle);
-  }, [tableId, prefs, enabled]);
+  }, [tableId, prefs, enabled, skipNextSaveRef]);
+
+  useEffect(() => {
+    return () => {
+      const pending = pendingRef.current;
+      if (pending) {
+        pendingRef.current = null;
+        void upsertTableColumnPrefs(pending.tableId, pending.prefs);
+      }
+    };
+  }, []);
 }
 
 type RootProps<T> = {
@@ -114,13 +137,21 @@ function Root<T>({ tableId, columns, children }: RootProps<T>) {
     mergeColumnPrefs(metas, null),
   );
   const [hydrated, setHydrated] = useState(false);
+  const dirtyRef = useRef(false);
+  const skipNextSaveRef = useRef(true);
 
   useEffect(() => {
     let cancelled = false;
+    dirtyRef.current = false;
+    skipNextSaveRef.current = true;
     void (async () => {
       const result = await getTableColumnPrefs(tableId);
       if (cancelled) return;
-      if ("prefs" in result) {
+      if (dirtyRef.current) {
+        // Keep in-flight edits and persist them after hydrate.
+        skipNextSaveRef.current = false;
+      } else if ("prefs" in result) {
+        skipNextSaveRef.current = true;
         setPrefsState(mergeColumnPrefs(metas, result.prefs));
       }
       setHydrated(true);
@@ -132,12 +163,13 @@ function Root<T>({ tableId, columns, children }: RootProps<T>) {
 
   const setPrefs = useCallback(
     (updater: (prev: TableColumnPrefPayload) => TableColumnPrefPayload) => {
+      dirtyRef.current = true;
       setPrefsState((prev) => mergeColumnPrefs(metas, updater(prev)));
     },
     [metas],
   );
 
-  useDebouncedSave(tableId, prefs, hydrated);
+  useDebouncedSave(tableId, prefs, hydrated, skipNextSaveRef);
 
   const orderedVisible = useMemo(() => {
     const byId = new Map(
@@ -326,15 +358,10 @@ function TableView<T>({
 
   function reorder(fromId: string, toId: string) {
     if (fromId === toId) return;
-    setPrefs((prev) => {
-      const order = [...prev.columnOrder];
-      const from = order.indexOf(fromId);
-      const to = order.indexOf(toId);
-      if (from < 0 || to < 0) return prev;
-      order.splice(from, 1);
-      order.splice(to, 0, fromId);
-      return { ...prev, columnOrder: order };
-    });
+    setPrefs((prev) => ({
+      ...prev,
+      columnOrder: reorderColumnOrder(prev.columnOrder, fromId, toId),
+    }));
   }
 
   function headerCell(col: DataTableColumn<T>) {
@@ -542,29 +569,27 @@ function TableView<T>({
   }
 
   return (
-    <div className={cn("overflow-x-auto", className)}>
-      <table className="text-left text-sm" style={tableStyle}>
-        {colgroup}
-        <thead className="sticky top-0 z-10 border-b bg-muted/90 backdrop-blur">
-          {headerRow}
-        </thead>
-        <tbody className="divide-y">
-          {rows.map((row, index) => (
-            <tr
-              key={getRowId(row)}
-              className={cn(
-                "hover:bg-muted/30",
-                onRowClick && "cursor-pointer",
-                rowClassName?.(row),
-              )}
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
-            >
-              {renderCells(row, index)}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <table className={cn("text-left text-sm", className)} style={tableStyle}>
+      {colgroup}
+      <thead className="sticky top-0 z-10 border-b bg-muted/90 backdrop-blur">
+        {headerRow}
+      </thead>
+      <tbody className="divide-y">
+        {rows.map((row, index) => (
+          <tr
+            key={getRowId(row)}
+            className={cn(
+              "hover:bg-muted/30",
+              onRowClick && "cursor-pointer",
+              rowClassName?.(row),
+            )}
+            onClick={onRowClick ? () => onRowClick(row) : undefined}
+          >
+            {renderCells(row, index)}
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 

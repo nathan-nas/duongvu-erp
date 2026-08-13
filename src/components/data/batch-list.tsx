@@ -115,7 +115,7 @@ export function BatchList({ batches }: BatchListProps) {
             <CardTitle>Lô tải lên</CardTitle>
             <DataTable.ColumnPicker />
           </CardHeader>
-          <CardContent>
+          <CardContent className="overflow-x-auto">
             <DataTable.Table
               rows={batches}
               getRowId={(batch) => batch.id}

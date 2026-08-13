@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { clampWidth, mergeColumnPrefs } from "./merge-column-prefs";
+import {
+  clampWidth,
+  mergeColumnPrefs,
+  reorderColumnOrder,
+} from "./merge-column-prefs";
 
 const COLS = [
   { id: "a", defaultWidth: 100, minWidth: 50, maxWidth: 200 },
@@ -44,5 +48,29 @@ describe("clampWidth", () => {
     expect(clampWidth(10, { minWidth: 50, maxWidth: 200 })).toBe(50);
     expect(clampWidth(999, { minWidth: 50, maxWidth: 200 })).toBe(200);
     expect(clampWidth(123.6, { minWidth: 50, maxWidth: 200 })).toBe(124);
+  });
+});
+
+describe("reorderColumnOrder", () => {
+  it("moves a column right onto the drop target", () => {
+    expect(reorderColumnOrder(["a", "b", "c", "d"], "a", "c")).toEqual([
+      "b",
+      "a",
+      "c",
+      "d",
+    ]);
+  });
+
+  it("moves a column left onto the drop target", () => {
+    expect(reorderColumnOrder(["a", "b", "c", "d"], "d", "b")).toEqual([
+      "a",
+      "d",
+      "b",
+      "c",
+    ]);
+  });
+
+  it("is a no-op for identical ids", () => {
+    expect(reorderColumnOrder(["a", "b"], "a", "a")).toEqual(["a", "b"]);
   });
 });
