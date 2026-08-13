@@ -499,9 +499,14 @@ function TableView<T>({
         fixedHeaderContent={() => headerRow}
         itemContent={(index, row) => renderCells(row, index)}
         components={{
-          Table: ({ style, ...tableProps }) => (
-            <table {...tableProps} className="text-left text-sm" style={{ ...style, ...tableStyle }}>
+          Table: ({ style, children, ...tableProps }) => (
+            <table
+              {...tableProps}
+              className="text-left text-sm"
+              style={{ ...style, ...tableStyle }}
+            >
               {colgroup}
+              {children}
             </table>
           ),
           TableHead: (headProps) => (
